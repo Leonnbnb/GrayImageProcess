@@ -203,6 +203,50 @@ bool Func_AverageValueFiltering(unsigned char** img,
 	return true;
 }
 
+bool Func_Subtract(
+	unsigned char** minuend,
+	unsigned char** subtrahend,
+	char** &dst,
+	const unsigned long width,
+	const unsigned long height
+) {
+	if (minuend == NULL || subtrahend == NULL || dst == NULL)
+		return false;
+	if (width == 0 || height == 0)
+		return false;
+	for (long j = 0; j < height; ++j) {
+		for (long i = 0; i < width; ++i) {
+			dst[j][i] = minuend[j][i] - subtrahend[j][i];
+		}
+	}
+	return true;
+}
+
+bool Func_Addition(
+	unsigned char** src,
+	char** addend,
+	const double m,
+	unsigned char** &dst,
+	const unsigned long width,
+	const unsigned long height
+) {
+	if (src == NULL || addend == NULL || dst == NULL)
+		return false;
+	if (width == 0 || height == 0)
+		return false;
+	for (long j = 0; j < height; ++j) {
+		for (long i = 0; i < width; ++i) {
+			double result = (src[j][i] + addend[j][i])*m;
+			if (result < 0)
+				result = 0;
+			else if (result > 255)
+				result = 255;
+			dst[j][i] = result;
+		}
+	}
+	return true;
+}
+
 bool Func(CImg* img) {
 	long width;
 	long height;
@@ -220,6 +264,16 @@ bool Func(CImg* img) {
 		afteravg[i] = new unsigned char[width];
 	}
 
+	char** aftersubtract = new char*[height];
+	for (int i = 0; i < height; ++i) {
+		aftersubtract[i] = new char[width];
+	}
+
+	unsigned char** destination = new unsigned char*[height];
+	for (int i = 0; i < height; ++i) {
+		destination[i] = new unsigned char[width];
+	}
+
 	//trans
 	for (long j = 0; j < height; ++j) {
 		for (long i = 0; i < width; ++i) {
@@ -233,11 +287,20 @@ bool Func(CImg* img) {
 	const unsigned long MASK_HEIGHT = 7;
 
 	Func_AverageValueFiltering(source, afteravg, width, height, MASK_WIDTH, MASK_HEIGHT);
+	Func_Subtract(source, afteravg, aftersubtract, width, height);
+	Func_Addition(source, aftersubtract, 1.5, destination, width, height);
 
-	CImg * pPreviewImg = create_image();
-	pPreviewImg->InitArray8(afteravg, height, width);
-	string filepath = NowTimeToFileName("..//results//giss//afterAVF", ".bmp");
-	pPreviewImg->SaveToFile(filepath.c_str());
+
+	//CImg * pPreviewImg1 = create_image();
+	//pPreviewImg1->InitArray8((unsigned char**)aftersubtract, height, width);
+	//string filepath1 = NowTimeToFileName("..//results//giss//afterAVF", ".bmp");
+	//pPreviewImg1->SaveToFile(filepath1.c_str());
+
+
+	CImg * pPreviewImg2 = create_image();
+	pPreviewImg2->InitArray8(destination, height, width);
+	string filepath2 = NowTimeToFileName("..//results//giss//rafterAdd", ".bmp");
+	pPreviewImg2->SaveToFile(filepath2.c_str());
 
 
 	//delete
@@ -251,13 +314,23 @@ bool Func(CImg* img) {
 	}
 	delete[] afteravg;
 
+	for (unsigned long i = 0; i < height; ++i) {
+		delete[] aftersubtract[i];
+	}
+	delete[] aftersubtract;
+
+	for (unsigned long i = 0; i < height; ++i) {
+		delete[] destination[i];
+	}
+	delete[] destination;
+
 	return true;
 }
 
 int main() {
 	CImg* pImg = create_image();
 	//BOOL rt = pImg->AttachFromFile("..//imgs//2-1-0.bmp");
-	BOOL rt = pImg->AttachFromFile("..//imgs//code-test-1.bmp");
+	BOOL rt = pImg->AttachFromFile("..//imgs//code-test-23.bmp");
 	if (!rt)
 		return -1;
 
