@@ -1,0 +1,111 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;hm;inl;inc;xsd</Extensions>
+    </Filter>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="datamatrix_quality_test.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="imgs\2-1-0.bmp">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="imgs\code-test-0.bmp">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="imgs\code-test-1.bmp">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="imgs\code-test-2.bmp">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="imgs\code-test-3.bmp">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="imgs\code-test-4.bmp">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="imgs\code-test-5.bmp">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="imgs\code-test-6.bmp">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="imgs\code-test-7.bmp">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="imgs\code-test-8.bmp">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="imgs\code-test-9.bmp">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="imgs\code-test-10.bmp">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="imgs\code-test-11.bmp">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="imgs\code-test-12.bmp">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="imgs\code-test-13.bmp">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="imgs\code-test-14.bmp">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="imgs\code-test-15.bmp">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="imgs\code-test-16.bmp">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="imgs\code-test-17.bmp">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="imgs\code-test-18.bmp">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="imgs\code-test-19.bmp">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="imgs\code-test-20.bmp">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="imgs\code-test-21.bmp">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="imgs\code-test-22.bmp">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="imgs\code-test-23.bmp">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="imgs\code-test-24.bmp">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="imgs\code-test-25.bmp">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="imgs\code-test-26.bmp">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="imgs\code-test-27.bmp">
+      <Filter>Resource Files</Filter>
+    </Image>
+  </ItemGroup>
+</Project>
