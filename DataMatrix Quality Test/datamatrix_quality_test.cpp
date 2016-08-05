@@ -46,6 +46,25 @@ typedef struct Grade {
 
 }Grade;
 
+typedef struct LShapeAreaInfo {
+	unsigned long leftdistance;
+	unsigned long downdistance;
+	unsigned long topdistance;
+	unsigned long rightdistance;
+	unsigned long L1width;
+	unsigned long CT1height;
+	unsigned long L2height;
+	unsigned long CT2width;
+	vector<double > QZL1MOD;
+	vector<double > L1MOD;
+	vector<double > QZL2MOD;
+	vector<double > L2MOD;
+	vector<double > CT1MOD;
+	vector<double > SA1MOD;
+	vector<double > CT2MOD;
+	vector<double > SA2MOD;
+} LSAI;
+
 //获取当前的系统时间以创建文件名
 string NowTimeToFileName(const string preStr, const string suffixalNameStr) {
 	static string pastTime;
@@ -626,6 +645,232 @@ bool Func_GN(vector<long > Xmaxima, vector<long > Ymaxima, double &score, GradeS
 	return true;
 }
 
+bool Func_L(unsigned char** img, vector<long > Xmaxima, vector<long > Ymaxima, const long width, const long height) {
+	if (img == NULL || Xmaxima.size() < 2 || Ymaxima.size() < 2)
+		return false;
+	LSAI info;
+
+	if (*Ymaxima.begin() - 0 > Ymaxima[1] - Ymaxima[0])
+		info.leftdistance = Ymaxima[1] - Ymaxima[0];
+	else
+		info.leftdistance = *Ymaxima.begin();
+
+	if (width - *prev(Ymaxima.end()) > *prev(Ymaxima.end()) - *(Ymaxima.end() - 2))
+		info.rightdistance = *prev(Ymaxima.end()) - *(Ymaxima.end() - 2);
+	else
+		info.rightdistance = width - *prev(Ymaxima.end());
+
+	if (*Xmaxima.begin() - 0 > Xmaxima[1] - Xmaxima[0])
+		info.topdistance = Xmaxima[1] - Xmaxima[0];
+	else
+		info.topdistance = *Xmaxima.begin();
+
+	if (height - *prev(Xmaxima.end()) > *prev(Xmaxima.end()) - *(Xmaxima.end() - 2))
+		info.downdistance = *prev(Xmaxima.end()) - *(Xmaxima.end() - 2);
+	else
+		info.downdistance = height - *prev(Xmaxima.end());
+
+	info.L1width = Ymaxima[1] - Ymaxima[0];
+	info.L2height = *prev(Xmaxima.end()) - *(Xmaxima.end() - 2);
+	info.CT1height = Xmaxima[1] - Xmaxima[0];
+	info.CT2width = *prev(Xmaxima.end()) - *(Xmaxima.end() - 2);
+
+	long xpre, ypre, sum, count;
+	double mod;
+
+
+	//QZL1
+	ypre = Xmaxima[0] - info.topdistance;
+	for each(long ythr in Xmaxima) {
+		sum = 0;
+		count = 0;
+		for (long y = ypre; y < ythr; ++y, ++ypre) {
+			for (long x = Ymaxima[0] - info.leftdistance; x < Ymaxima[0]; ++x) {
+				sum += img[y][x];
+				++count;
+			}
+		}
+		if (count != 0) {
+			mod = sum / count;
+			info.QZL1MOD.push_back(mod);
+		}
+	}
+	sum = 0;
+	count = 0;
+	for (long y = *prev(Xmaxima.end()); y < *prev(Xmaxima.end()) + info.downdistance; ++y) {
+		for (long x = Ymaxima[0] - info.leftdistance; x < Ymaxima[0]; ++x) {
+			sum += img[y][x];
+			++count;
+		}
+	}
+	if (count != 0) {
+		mod = sum / count;
+		info.QZL1MOD.push_back(mod);
+	}
+
+	//L1
+	ypre = Xmaxima[0];
+	for each(long ythr in Xmaxima) {
+		if (ythr == ypre)
+			continue;
+		sum = 0;
+		count = 0;
+		for (long y = ypre; y < ythr; ++y, ++ypre) {
+			for (long x = Ymaxima[0]; x < Ymaxima[1]; ++x) {
+				sum += img[y][x];
+				++count;
+			}
+		}
+		if (count != 0) {
+			mod = sum / count;
+			info.L1MOD.push_back(mod);
+		}
+	}
+	sum = 0;
+	count = 0;
+	for (long y = *prev(Xmaxima.end()); y < *prev(Xmaxima.end()) + info.downdistance; ++y) {
+		for (long x = Ymaxima[0]; x < Ymaxima[1]; ++x) {
+			sum += img[y][x];
+			++count;
+		}
+	}
+	if (count != 0) {
+		mod = sum / count;
+		info.L1MOD.push_back(mod);
+	}
+
+	//QZL2
+	xpre = Ymaxima[0] - info.leftdistance;
+	for each(long xthr in Ymaxima) {
+		sum = 0;
+		count = 0;
+		for (long y = *prev(Xmaxima.end()); y < *prev(Xmaxima.end()) + info.downdistance; ++y) {
+			for (long x = xpre; x < xthr; ++x, ++xpre) {
+				sum += img[y][x];
+				++count;
+			}
+		}
+		if (count != 0) {
+			mod = sum / count;
+			info.QZL2MOD.push_back(mod);
+		}
+	}
+	sum = 0;
+	count = 0;
+	for (long y = *prev(Xmaxima.end()); y < *prev(Xmaxima.end()) + info.downdistance; ++y) {
+		for (long x = *prev(Ymaxima.end()); x < *prev(Ymaxima.end()) + info.rightdistance; ++x) {
+			sum += img[y][x];
+			++count;
+		}
+	}
+	if (count != 0) {
+		mod = sum / count;
+		info.QZL2MOD.push_back(mod);
+	}
+
+	//L2
+	xpre = Ymaxima[0] - info.leftdistance;
+	for each(long xthr in Ymaxima) {
+		sum = 0;
+		count = 0;
+		for (long y = *(Xmaxima.end() - 2); y < *prev(Xmaxima.end()); ++y) {
+			for (long x = xpre; x < xthr; ++x, ++xpre) {
+				sum += img[y][x];
+				++count;
+			}
+		}
+		if (count != 0) {
+			mod = sum / count;
+			info.L2MOD.push_back(mod);
+		}
+	}
+
+	//SA1
+	xpre = Ymaxima[0];
+	for each(long xthr in Ymaxima) {
+		if (xthr == xpre)
+			continue;
+		sum = 0;
+		count = 0;
+		for (long y = Xmaxima[0] - info.topdistance; y < Xmaxima[0]; ++y) {
+			for (long x = xpre; x < xthr; ++x, ++xpre) {
+				sum += img[y][x];
+				++count;
+			}
+		}
+		if (count != 0) {
+			mod = sum / count;
+			info.SA1MOD.push_back(mod);
+		}
+	}
+
+	//CT1
+	xpre = Ymaxima[0];
+	for each(long xthr in Ymaxima) {
+		if (xthr == xpre || xthr == Ymaxima[1])
+			continue;
+		sum = 0;
+		count = 0;
+		for (long y = Xmaxima[0]; y < Xmaxima[1]; ++y) {
+			for (long x = xpre; x < xthr; ++x, ++xpre) {
+				sum += img[y][x];
+				++count;
+			}
+		}
+		if (count != 0) {
+			mod = sum / count;
+			info.CT1MOD.push_back(mod);
+		}
+	}
+
+	//SA2
+	ypre = Xmaxima[0] - info.topdistance;
+	for each(long ythr in Xmaxima) {
+		sum = 0;
+		count = 0;
+		for (long y = ypre; y < ythr; ++y, ++ypre) {
+			for (long x = *(Ymaxima.end() - 1); x < *(Ymaxima.end() - 1) + info.rightdistance; ++x) {
+				sum += img[y][x];
+				++count;
+			}
+		}
+		if (count != 0) {
+			mod = sum / count;
+			info.SA2MOD.push_back(mod);
+		}
+	}
+
+	//CT2
+	ypre = Xmaxima[0];
+	for each(long ythr in Xmaxima) {
+		sum = 0;
+		count = 0;
+		for (long y = ypre; y < ythr; ++y, ++ypre) {
+			for (long x = *(Ymaxima.end() - 2); x < *(Ymaxima.end() - 1); ++x) {
+				sum += img[y][x];
+				++count;
+			}
+		}
+		if (count != 0) {
+			mod = sum / count;
+			info.CT2MOD.push_back(mod);
+		}
+	}
+
+	//for each(double var in info.CT2MOD) {
+	//	cout << var << " ";
+	//}
+	//cout << endl;
+
+	//cout << "L:" << info.leftdistance << " " << Ymaxima[1] - Ymaxima[0] << endl;
+	//cout << "D:" << info.downdistance << " " << *prev(Xmaxima.end()) - *(Xmaxima.end() - 2) << endl;
+	//cout << "T:" << info.topdistance << " " << Xmaxima[1] - Xmaxima[0] << endl;
+	//cout << "R:" << info.rightdistance << " " << *prev(Xmaxima.end()) - *(Xmaxima.end() - 2) << endl;
+
+
+}
+
+
 bool Func(CImg* pImg, Grade &grade) {
 	if (pImg == NULL)
 		return false;
@@ -740,6 +985,8 @@ bool Func(CImg* pImg, Grade &grade) {
 
 	//cout << "MOD:" << MOD << "\nGrade:" << Grade << endl;
 
+	Func_L(source, Xmaxima, Ymaxima, width, height);
+
 	//delete
 	delete mappedx;
 	mappedx = NULL;
@@ -782,7 +1029,7 @@ bool Func(CImg* pImg, Grade &grade) {
 int main() {
 	CImg* pImg = create_image();
 	//BOOL rt = pImg->AttachFromFile("..//imgs//2-1-0.bmp");
-	BOOL rt = pImg->AttachFromFile("..//imgs//code-test-10.bmp");
+	BOOL rt = pImg->AttachFromFile("..//imgs//code-test-8.bmp");
 	if (!rt)
 		return -1;
 
