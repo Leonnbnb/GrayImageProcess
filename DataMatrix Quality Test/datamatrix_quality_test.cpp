@@ -4,8 +4,13 @@
 #include <memory.h>
 #include <windows.h>//BOOL etc.
 
-#include "..//shared//ExtPatternRecognize.h"
+//filename
+#include <ctime>
+#include <sstream>
+#include <iomanip>
 
+//CImg
+#include "..//shared//ExtPatternRecognize.h"
 #ifdef _DEBUG
 #pragma  comment(lib, "../Debug/hawkvis_D.lib")
 #else
@@ -40,6 +45,31 @@ typedef struct Grade {
 	}
 
 }Grade;
+
+//获取当前的系统时间以创建文件名
+string NowTimeToFileName(const string preStr, const string suffixalNameStr) {
+	static string pastTime;
+	time_t t = time(NULL);
+	tm tm = *localtime(&t);
+	string nowTime;
+	stringstream os;
+	os.clear();
+	os << put_time(&tm, "%y%m%d_%H%M%S");
+	nowTime = os.str();
+	string fileName;
+	static short k = 0;
+	if (nowTime != pastTime && (!nowTime.empty())) {//因为获取时间只精确到秒，但是程序可以在一秒之内创建数百个文件，所以要对文件名进行区分
+		fileName = preStr + " - " + nowTime + "_0000" + suffixalNameStr;
+		k = 0;
+	}
+	else {
+		char extra[5];
+		sprintf_s(extra, sizeof(extra), "%04d", ++k);//
+		fileName = preStr + " - " + nowTime + "_" + extra + suffixalNameStr;
+	}
+	pastTime = nowTime;
+	return fileName;
+}
 
 //计算SC值
 bool Func_SC(unsigned char* pBuffer, const long width, const long height, double &SC, GradeSymbol &Grade) {
@@ -438,7 +468,8 @@ bool _Func_DrawLine(unsigned char** img, vector<long > Xmaxima, vector<long > Ym
 	}
 	CImg * pPreviewImg = create_image();
 	pPreviewImg->InitArray8(preview, height, width);
-	pPreviewImg->SaveToFile("..//results//dqt//DrawLine.bmp");
+	string filepath = NowTimeToFileName("..//results//dqt//DrawLine", ".bmp");
+	pPreviewImg->SaveToFile(filepath.c_str());
 
 	for (unsigned long i = 0; i < height; ++i) {
 		delete[] preview[i];
@@ -573,7 +604,7 @@ bool Func_GN(vector<long > Xmaxima, vector<long > Ymaxima, double &score, GradeS
 		if (p > ymaxdistance)
 			ymaxdistance = p;
 	}
-	
+
 	score = sqrt((xmaxdistance*xmaxdistance) + (ymaxdistance*ymaxdistance)) / xavg/*sqrt((xavg*xavg) + (yavg*yavg))*/;
 
 	if (score > 0.75) {

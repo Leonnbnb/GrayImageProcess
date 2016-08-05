@@ -19,11 +19,13 @@
 #include <iostream>
 #include <windows.h>
 
-#include <ctime>//
+//filename
+#include <ctime>
+#include <sstream>
+#include <iomanip>
 
+//CImg
 #include "..//shared//ExtPatternRecognize.h"
-
-
 #ifdef _DEBUG
 #pragma  comment(lib, "../Debug/hawkvis_D.lib")
 #else
@@ -31,6 +33,32 @@
 #endif
 
 using namespace std;
+
+//获取当前的系统时间以创建文件名
+string NowTimeToFileName(const string preStr, const string suffixalNameStr) {
+	static string pastTime;
+	time_t t = time(NULL);
+	tm tm = *localtime(&t);
+	string nowTime;
+	stringstream os;
+	os.clear();
+	os << put_time(&tm, "%y%m%d_%H%M%S");
+	nowTime = os.str();
+	string fileName;
+	static short k = 0;
+	if (nowTime != pastTime && (!nowTime.empty())) {//因为获取时间只精确到秒，但是程序可以在一秒之内创建数百个文件，所以要对文件名进行区分
+		fileName = preStr + " - " + nowTime + "_0000" + suffixalNameStr;
+		k = 0;
+	}
+	else {
+		char extra[5];
+		sprintf_s(extra, sizeof(extra), "%04d", ++k);//
+		fileName = preStr + " - " + nowTime + "_" + extra + suffixalNameStr;
+	}
+	pastTime = nowTime;
+	return fileName;
+}
+
 
 void SetHorizontalMin(unsigned char** src,
 	const unsigned long width,
@@ -529,7 +557,8 @@ int main() {
 
 	CImg * pPreviewImg = create_image();
 	pPreviewImg->InitArray8(source, HEIGHT, WIDTH);
-	pPreviewImg->SaveToFile("..//results//giead//Preview.bmp");
+	string filepath = NowTimeToFileName("..//results//giead//Preview", ".bmp");
+	pPreviewImg->SaveToFile(filepath.c_str());
 
 	//delete
 	for (unsigned long i = 0; i < HEIGHT; ++i) {
