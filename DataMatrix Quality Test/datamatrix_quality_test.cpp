@@ -680,15 +680,16 @@ bool Func_L(unsigned char** img, vector<long > Xmaxima, vector<long > Ymaxima, c
 
 
 	//QZL1
-	ypre = Xmaxima[0] - info.topdistance;
+	ypre = Xmaxima[0] - info.topdistance + 1;
 	for each(long ythr in Xmaxima) {
 		sum = 0;
 		count = 0;
 		for (long y = ypre; y < ythr; ++y, ++ypre) {
-			for (long x = Ymaxima[0] - info.leftdistance; x < Ymaxima[0]; ++x) {
+			for (long x = Ymaxima[0] - info.leftdistance + 1; x < Ymaxima[0]; ++x) {
 				sum += img[y][x];
 				++count;
 			}
+			++ypre;
 		}
 		if (count != 0) {
 			mod = sum / count;
@@ -697,8 +698,8 @@ bool Func_L(unsigned char** img, vector<long > Xmaxima, vector<long > Ymaxima, c
 	}
 	sum = 0;
 	count = 0;
-	for (long y = *prev(Xmaxima.end()); y < *prev(Xmaxima.end()) + info.downdistance; ++y) {
-		for (long x = Ymaxima[0] - info.leftdistance; x < Ymaxima[0]; ++x) {
+	for (long y = *prev(Xmaxima.end()) + 1; y < *prev(Xmaxima.end()) + info.downdistance; ++y) {
+		for (long x = Ymaxima[0] - info.leftdistance + 1; x < Ymaxima[0]; ++x) {
 			sum += img[y][x];
 			++count;
 		}
@@ -709,17 +710,18 @@ bool Func_L(unsigned char** img, vector<long > Xmaxima, vector<long > Ymaxima, c
 	}
 
 	//L1
-	ypre = Xmaxima[0];
+	ypre = Xmaxima[0] + 1;
 	for each(long ythr in Xmaxima) {
 		if (ythr == ypre)
 			continue;
 		sum = 0;
 		count = 0;
 		for (long y = ypre; y < ythr; ++y, ++ypre) {
-			for (long x = Ymaxima[0]; x < Ymaxima[1]; ++x) {
+			for (long x = Ymaxima[0] + 1; x < Ymaxima[1]; ++x) {
 				sum += img[y][x];
 				++count;
 			}
+			++ypre;
 		}
 		if (count != 0) {
 			mod = sum / count;
@@ -728,8 +730,8 @@ bool Func_L(unsigned char** img, vector<long > Xmaxima, vector<long > Ymaxima, c
 	}
 	sum = 0;
 	count = 0;
-	for (long y = *prev(Xmaxima.end()); y < *prev(Xmaxima.end()) + info.downdistance; ++y) {
-		for (long x = Ymaxima[0]; x < Ymaxima[1]; ++x) {
+	for (long y = *prev(Xmaxima.end()) + 1; y < *prev(Xmaxima.end()) + info.downdistance; ++y) {
+		for (long x = Ymaxima[0] + 1; x < Ymaxima[1]; ++x) {
 			sum += img[y][x];
 			++count;
 		}
@@ -740,15 +742,16 @@ bool Func_L(unsigned char** img, vector<long > Xmaxima, vector<long > Ymaxima, c
 	}
 
 	//QZL2
-	xpre = Ymaxima[0] - info.leftdistance;
+	xpre = Ymaxima[0] - info.leftdistance + 1;
 	for each(long xthr in Ymaxima) {
 		sum = 0;
 		count = 0;
-		for (long y = *prev(Xmaxima.end()); y < *prev(Xmaxima.end()) + info.downdistance; ++y) {
+		for (long y = *prev(Xmaxima.end()) + 1; y < *prev(Xmaxima.end()) + info.downdistance; ++y) {
 			for (long x = xpre; x < xthr; ++x, ++xpre) {
 				sum += img[y][x];
 				++count;
 			}
+			++xpre;
 		}
 		if (count != 0) {
 			mod = sum / count;
@@ -757,8 +760,8 @@ bool Func_L(unsigned char** img, vector<long > Xmaxima, vector<long > Ymaxima, c
 	}
 	sum = 0;
 	count = 0;
-	for (long y = *prev(Xmaxima.end()); y < *prev(Xmaxima.end()) + info.downdistance; ++y) {
-		for (long x = *prev(Ymaxima.end()); x < *prev(Ymaxima.end()) + info.rightdistance; ++x) {
+	for (long y = *prev(Xmaxima.end()) + 1; y < *prev(Xmaxima.end()) + info.downdistance; ++y) {
+		for (long x = *prev(Ymaxima.end()) + 1; x < *prev(Ymaxima.end()) + info.rightdistance; ++x) {
 			sum += img[y][x];
 			++count;
 		}
@@ -769,15 +772,16 @@ bool Func_L(unsigned char** img, vector<long > Xmaxima, vector<long > Ymaxima, c
 	}
 
 	//L2
-	xpre = Ymaxima[0] - info.leftdistance;
+	xpre = Ymaxima[0] - info.leftdistance + 1;
 	for each(long xthr in Ymaxima) {
 		sum = 0;
 		count = 0;
-		for (long y = *(Xmaxima.end() - 2); y < *prev(Xmaxima.end()); ++y) {
+		for (long y = *(Xmaxima.end() - 2) + 1; y < *prev(Xmaxima.end()); ++y) {
 			for (long x = xpre; x < xthr; ++x, ++xpre) {
 				sum += img[y][x];
 				++count;
 			}
+			++xpre;
 		}
 		if (count != 0) {
 			mod = sum / count;
@@ -786,17 +790,18 @@ bool Func_L(unsigned char** img, vector<long > Xmaxima, vector<long > Ymaxima, c
 	}
 
 	//SA1
-	xpre = Ymaxima[0];
+	xpre = Ymaxima[0] + 1;
 	for each(long xthr in Ymaxima) {
 		if (xthr == xpre)
 			continue;
 		sum = 0;
 		count = 0;
-		for (long y = Xmaxima[0] - info.topdistance; y < Xmaxima[0]; ++y) {
+		for (long y = Xmaxima[0] - info.topdistance + 1; y < Xmaxima[0]; ++y) {
 			for (long x = xpre; x < xthr; ++x, ++xpre) {
 				sum += img[y][x];
 				++count;
 			}
+			++xpre;
 		}
 		if (count != 0) {
 			mod = sum / count;
@@ -805,17 +810,18 @@ bool Func_L(unsigned char** img, vector<long > Xmaxima, vector<long > Ymaxima, c
 	}
 
 	//CT1
-	xpre = Ymaxima[0];
+	xpre = Ymaxima[0] + 1;
 	for each(long xthr in Ymaxima) {
 		if (xthr == xpre || xthr == Ymaxima[1])
 			continue;
 		sum = 0;
 		count = 0;
-		for (long y = Xmaxima[0]; y < Xmaxima[1]; ++y) {
+		for (long y = Xmaxima[0] + 1; y < Xmaxima[1]; ++y) {
 			for (long x = xpre; x < xthr; ++x, ++xpre) {
 				sum += img[y][x];
 				++count;
 			}
+			++xpre;
 		}
 		if (count != 0) {
 			mod = sum / count;
@@ -824,15 +830,16 @@ bool Func_L(unsigned char** img, vector<long > Xmaxima, vector<long > Ymaxima, c
 	}
 
 	//SA2
-	ypre = Xmaxima[0] - info.topdistance;
+	ypre = Xmaxima[0] - info.topdistance + 1;
 	for each(long ythr in Xmaxima) {
 		sum = 0;
 		count = 0;
 		for (long y = ypre; y < ythr; ++y, ++ypre) {
-			for (long x = *(Ymaxima.end() - 1); x < *(Ymaxima.end() - 1) + info.rightdistance; ++x) {
+			for (long x = *(Ymaxima.end() - 1) + 1; x < *(Ymaxima.end() - 1) + info.rightdistance; ++x) {
 				sum += img[y][x];
 				++count;
 			}
+			++ypre;
 		}
 		if (count != 0) {
 			mod = sum / count;
@@ -841,15 +848,16 @@ bool Func_L(unsigned char** img, vector<long > Xmaxima, vector<long > Ymaxima, c
 	}
 
 	//CT2
-	ypre = Xmaxima[0];
+	ypre = Xmaxima[0] + 1;
 	for each(long ythr in Xmaxima) {
 		sum = 0;
 		count = 0;
 		for (long y = ypre; y < ythr; ++y, ++ypre) {
-			for (long x = *(Ymaxima.end() - 2); x < *(Ymaxima.end() - 1); ++x) {
+			for (long x = *(Ymaxima.end() - 2) + 1; x < *(Ymaxima.end() - 1); ++x) {
 				sum += img[y][x];
 				++count;
 			}
+			++ypre;
 		}
 		if (count != 0) {
 			mod = sum / count;
@@ -857,10 +865,46 @@ bool Func_L(unsigned char** img, vector<long > Xmaxima, vector<long > Ymaxima, c
 		}
 	}
 
-	//for each(double var in info.CT2MOD) {
-	//	cout << var << " ";
-	//}
-	//cout << endl;
+	cout << "L1:\t";
+	for each(double var in info.L1MOD) {
+		cout << var << " ";
+	}
+	cout << endl;
+	cout << "QZL1:\t";
+	for each(double var in info.QZL1MOD) {
+		cout << var << " ";
+	}
+	cout << endl;
+	cout << "L2:\t";
+	for each(double var in info.L2MOD) {
+		cout << var << " ";
+	}
+	cout << endl;
+	cout << "QZL2:\t";
+	for each(double var in info.QZL2MOD) {
+		cout << var << " ";
+	}
+	cout << endl;
+	cout << "SA1:\t";
+	for each(double var in info.SA1MOD) {
+		cout << var << " ";
+	}
+	cout << endl;
+	cout << "CT1:\t";
+	for each(double var in info.CT1MOD) {
+		cout << var << " ";
+	}
+	cout << endl;
+	cout << "SA2:\t";
+	for each(double var in info.SA2MOD) {
+		cout << var << " ";
+	}
+	cout << endl;
+	cout << "CT2:\t";
+	for each(double var in info.CT2MOD) {
+		cout << var << " ";
+	}
+	cout << endl;
 
 	//cout << "L:" << info.leftdistance << " " << Ymaxima[1] - Ymaxima[0] << endl;
 	//cout << "D:" << info.downdistance << " " << *prev(Xmaxima.end()) - *(Xmaxima.end() - 2) << endl;
@@ -1029,7 +1073,7 @@ bool Func(CImg* pImg, Grade &grade) {
 int main() {
 	CImg* pImg = create_image();
 	//BOOL rt = pImg->AttachFromFile("..//imgs//2-1-0.bmp");
-	BOOL rt = pImg->AttachFromFile("..//imgs//code-test-8.bmp");
+	BOOL rt = pImg->AttachFromFile("..//imgs//code-test-10.bmp");
 	if (!rt)
 		return -1;
 
