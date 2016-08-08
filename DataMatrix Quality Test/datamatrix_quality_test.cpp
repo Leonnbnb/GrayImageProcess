@@ -19,6 +19,9 @@
 
 using namespace std;
 
+//-----结构-----
+
+//评级等级符号及其对应分数
 typedef enum GradeSymbol {
 	A = 4,
 	B = 3,
@@ -27,6 +30,7 @@ typedef enum GradeSymbol {
 	E = 0
 }GradeSymbol;
 
+//各项等级评分数据以及等级
 typedef struct Grade {
 	GradeSymbol SC;
 	double SC_Score;
@@ -46,6 +50,7 @@ typedef struct Grade {
 
 }Grade;
 
+//L形区域即几个静态区域的单元MOD数据
 typedef struct LShapeAreaInfo {
 	unsigned long leftdistance;
 	unsigned long downdistance;
@@ -55,6 +60,14 @@ typedef struct LShapeAreaInfo {
 	unsigned long CT1height;
 	unsigned long L2height;
 	unsigned long CT2width;
+	vector<double > QZL1AVG;
+	vector<double > L1AVG;
+	vector<double > QZL2AVG;
+	vector<double > L2AVG;
+	vector<double > CT1AVG;
+	vector<double > SA1AVG;
+	vector<double > CT2AVG;
+	vector<double > SA2AVG;
 	vector<double > QZL1MOD;
 	vector<double > L1MOD;
 	vector<double > QZL2MOD;
@@ -64,6 +77,8 @@ typedef struct LShapeAreaInfo {
 	vector<double > CT2MOD;
 	vector<double > SA2MOD;
 } LSAI;
+
+//-----实现函数-----
 
 //获取当前的系统时间以创建文件名
 string NowTimeToFileName(const string preStr, const string suffixalNameStr) {
@@ -88,6 +103,44 @@ string NowTimeToFileName(const string preStr, const string suffixalNameStr) {
 	}
 	pastTime = nowTime;
 	return fileName;
+}
+
+//根据得到的波峰点位绘制网格（仅供调试输出中间结果）
+bool _Func_DrawLine(unsigned char** img, vector<long > Xmaxima, vector<long > Ymaxima, const long width, const long height, const unsigned char color) {
+	if (img == NULL || Xmaxima.size() == 0 || Ymaxima.size() == 0)
+		return false;
+	unsigned char** preview = new unsigned char*[height];
+	for (unsigned long i = 0; i < height; ++i) {
+		preview[i] = new unsigned char[width];
+	}
+
+	for (unsigned long i = 0; i < height; ++i) {
+		memcpy(preview[i], img[i], width * sizeof(unsigned char));
+	}
+
+	for each(long y in Xmaxima) {
+		for (long i = 0; i < width; ++i) {
+			preview[y][i] = (unsigned char)color;
+		}
+	}
+
+	for each(long x in Ymaxima) {
+		for (long j = 0; j < height; ++j) {
+			preview[j][x] = (unsigned char)color;
+		}
+	}
+	CImg * pPreviewImg = create_image();
+	pPreviewImg->InitArray8(preview, height, width);
+	string filepath = NowTimeToFileName("..//results//dqt//DrawLine", ".bmp");
+	pPreviewImg->SaveToFile(filepath.c_str());
+
+	for (unsigned long i = 0; i < height; ++i) {
+		delete[] preview[i];
+	}
+	delete[] preview;
+	preview = NULL;
+
+	return true;
 }
 
 //计算SC值
@@ -461,44 +514,6 @@ bool Func_GetMaxima(long long* Amx, long long* Amy, vector<long > &Xmaxima, vect
 	return true;
 }
 
-//根据得到的波峰点位绘制网格（仅供调试输出中间结果）
-bool _Func_DrawLine(unsigned char** img, vector<long > Xmaxima, vector<long > Ymaxima, const long width, const long height, const unsigned char color) {
-	if (img == NULL || Xmaxima.size() == 0 || Ymaxima.size() == 0)
-		return false;
-	unsigned char** preview = new unsigned char*[height];
-	for (unsigned long i = 0; i < height; ++i) {
-		preview[i] = new unsigned char[width];
-	}
-
-	for (unsigned long i = 0; i < height; ++i) {
-		memcpy(preview[i], img[i], width * sizeof(unsigned char));
-	}
-
-	for each(long y in Xmaxima) {
-		for (long i = 0; i < width; ++i) {
-			preview[y][i] = (unsigned char)color;
-		}
-	}
-
-	for each(long x in Ymaxima) {
-		for (long j = 0; j < height; ++j) {
-			preview[j][x] = (unsigned char)color;
-		}
-	}
-	CImg * pPreviewImg = create_image();
-	pPreviewImg->InitArray8(preview, height, width);
-	string filepath = NowTimeToFileName("..//results//dqt//DrawLine", ".bmp");
-	pPreviewImg->SaveToFile(filepath.c_str());
-
-	for (unsigned long i = 0; i < height; ++i) {
-		delete[] preview[i];
-	}
-	delete[] preview;
-	preview = NULL;
-
-	return true;
-}
-
 //求得每个信息点的像素值均值
 bool Func_ModuleAvg(unsigned char** img, vector<long > Xmaxima, vector<long > Ymaxima, vector<vector<unsigned char > > &avr, const long width, const long height) {
 	if (img == NULL || Xmaxima.size() == 0 || Ymaxima.size() == 0)
@@ -535,13 +550,13 @@ bool Func_ModuleAvg(unsigned char** img, vector<long > Xmaxima, vector<long > Ym
 }
 
 //求全图最小MOD值
-bool Func_Modulation(vector<vector<unsigned char > > R, const unsigned char GT, const unsigned char SC, double &mod, GradeSymbol &grade) {
+bool Func_MinModulation(vector<vector<unsigned char > > R, const unsigned char GT, const double SC, double &mod, GradeSymbol &grade) {
 	if (R.size() == 0 || SC == 0)
 		return false;
 	double min = 1;
 	for (vector<vector<unsigned char > >::iterator p = R.begin() + 1; p != prev(R.end()); ++p) {
 		for (vector<unsigned char >::iterator pp = p->begin() + 1; pp != prev(p->end()); ++pp) {
-			double temp = 2.00 * (double)abs(*pp - GT) / (double)SC;
+			double temp = 2.00 * (double)abs(*pp - GT) / SC;
 			if (temp <= min) {
 				min = temp;
 			}
@@ -645,7 +660,8 @@ bool Func_GN(vector<long > Xmaxima, vector<long > Ymaxima, double &score, GradeS
 	return true;
 }
 
-bool Func_L(unsigned char** img, vector<long > Xmaxima, vector<long > Ymaxima, const long width, const long height) {
+//L形区域以及反L形区域的各单元像素均值与MOD值计算
+bool Func_FPD(unsigned char** img, vector<long > Xmaxima, vector<long > Ymaxima, const double SC, const long width, const long height) {
 	if (img == NULL || Xmaxima.size() < 2 || Ymaxima.size() < 2)
 		return false;
 	LSAI info;
@@ -684,16 +700,16 @@ bool Func_L(unsigned char** img, vector<long > Xmaxima, vector<long > Ymaxima, c
 	for each(long ythr in Xmaxima) {
 		sum = 0;
 		count = 0;
-		for (long y = ypre; y < ythr; ++y, ++ypre) {
+		for (long y = ypre; y < ythr; ++y) {
 			for (long x = Ymaxima[0] - info.leftdistance + 1; x < Ymaxima[0]; ++x) {
 				sum += img[y][x];
 				++count;
 			}
-			++ypre;
 		}
+		ypre = ythr + 1;
 		if (count != 0) {
 			mod = sum / count;
-			info.QZL1MOD.push_back(mod);
+			info.QZL1AVG.push_back(mod);
 		}
 	}
 	sum = 0;
@@ -706,26 +722,26 @@ bool Func_L(unsigned char** img, vector<long > Xmaxima, vector<long > Ymaxima, c
 	}
 	if (count != 0) {
 		mod = sum / count;
-		info.QZL1MOD.push_back(mod);
+		info.QZL1AVG.push_back(mod);
 	}
 
 	//L1
 	ypre = Xmaxima[0] + 1;
 	for each(long ythr in Xmaxima) {
-		if (ythr == ypre)
+		if (ythr == Xmaxima[0])
 			continue;
 		sum = 0;
 		count = 0;
-		for (long y = ypre; y < ythr; ++y, ++ypre) {
+		for (long y = ypre; y < ythr; ++y) {
 			for (long x = Ymaxima[0] + 1; x < Ymaxima[1]; ++x) {
 				sum += img[y][x];
 				++count;
 			}
-			++ypre;
 		}
+		ypre = ythr + 1;
 		if (count != 0) {
 			mod = sum / count;
-			info.L1MOD.push_back(mod);
+			info.L1AVG.push_back(mod);
 		}
 	}
 	sum = 0;
@@ -738,7 +754,7 @@ bool Func_L(unsigned char** img, vector<long > Xmaxima, vector<long > Ymaxima, c
 	}
 	if (count != 0) {
 		mod = sum / count;
-		info.L1MOD.push_back(mod);
+		info.L1AVG.push_back(mod);
 	}
 
 	//QZL2
@@ -747,15 +763,15 @@ bool Func_L(unsigned char** img, vector<long > Xmaxima, vector<long > Ymaxima, c
 		sum = 0;
 		count = 0;
 		for (long y = *prev(Xmaxima.end()) + 1; y < *prev(Xmaxima.end()) + info.downdistance; ++y) {
-			for (long x = xpre; x < xthr; ++x, ++xpre) {
+			for (long x = xpre; x < xthr; ++x) {
 				sum += img[y][x];
 				++count;
 			}
-			++xpre;
 		}
+		xpre = xthr + 1;
 		if (count != 0) {
 			mod = sum / count;
-			info.QZL2MOD.push_back(mod);
+			info.QZL2AVG.push_back(mod);
 		}
 	}
 	sum = 0;
@@ -768,7 +784,7 @@ bool Func_L(unsigned char** img, vector<long > Xmaxima, vector<long > Ymaxima, c
 	}
 	if (count != 0) {
 		mod = sum / count;
-		info.QZL2MOD.push_back(mod);
+		info.QZL2AVG.push_back(mod);
 	}
 
 	//L2
@@ -776,56 +792,56 @@ bool Func_L(unsigned char** img, vector<long > Xmaxima, vector<long > Ymaxima, c
 	for each(long xthr in Ymaxima) {
 		sum = 0;
 		count = 0;
-		for (long y = *(Xmaxima.end() - 2) + 1; y < *prev(Xmaxima.end()); ++y) {
-			for (long x = xpre; x < xthr; ++x, ++xpre) {
+		for (long y = *(Xmaxima.end() - 2) + 1; y < *(Xmaxima.end() - 1); ++y) {
+			for (long x = xpre; x < xthr; ++x) {
 				sum += img[y][x];
 				++count;
 			}
-			++xpre;
 		}
+		xpre = xthr + 1;
 		if (count != 0) {
 			mod = sum / count;
-			info.L2MOD.push_back(mod);
+			info.L2AVG.push_back(mod);
 		}
 	}
 
 	//SA1
 	xpre = Ymaxima[0] + 1;
 	for each(long xthr in Ymaxima) {
-		if (xthr == xpre)
+		if (xthr == Ymaxima[0])
 			continue;
 		sum = 0;
 		count = 0;
 		for (long y = Xmaxima[0] - info.topdistance + 1; y < Xmaxima[0]; ++y) {
-			for (long x = xpre; x < xthr; ++x, ++xpre) {
+			for (long x = xpre; x < xthr; ++x) {
 				sum += img[y][x];
 				++count;
 			}
-			++xpre;
 		}
+		xpre = xthr + 1;
 		if (count != 0) {
 			mod = sum / count;
-			info.SA1MOD.push_back(mod);
+			info.SA1AVG.push_back(mod);
 		}
 	}
 
 	//CT1
 	xpre = Ymaxima[0] + 1;
 	for each(long xthr in Ymaxima) {
-		if (xthr == xpre || xthr == Ymaxima[1])
+		if (xthr == Ymaxima[0])
 			continue;
 		sum = 0;
 		count = 0;
 		for (long y = Xmaxima[0] + 1; y < Xmaxima[1]; ++y) {
-			for (long x = xpre; x < xthr; ++x, ++xpre) {
+			for (long x = xpre; x < xthr; ++x) {
 				sum += img[y][x];
 				++count;
 			}
-			++xpre;
 		}
+		xpre = xthr + 1;
 		if (count != 0) {
 			mod = sum / count;
-			info.CT1MOD.push_back(mod);
+			info.CT1AVG.push_back(mod);
 		}
 	}
 
@@ -834,16 +850,16 @@ bool Func_L(unsigned char** img, vector<long > Xmaxima, vector<long > Ymaxima, c
 	for each(long ythr in Xmaxima) {
 		sum = 0;
 		count = 0;
-		for (long y = ypre; y < ythr; ++y, ++ypre) {
+		for (long y = ypre; y < ythr; ++y) {
 			for (long x = *(Ymaxima.end() - 1) + 1; x < *(Ymaxima.end() - 1) + info.rightdistance; ++x) {
 				sum += img[y][x];
 				++count;
 			}
-			++ypre;
 		}
+		ypre = ythr + 1;
 		if (count != 0) {
 			mod = sum / count;
-			info.SA2MOD.push_back(mod);
+			info.SA2AVG.push_back(mod);
 		}
 	}
 
@@ -852,69 +868,139 @@ bool Func_L(unsigned char** img, vector<long > Xmaxima, vector<long > Ymaxima, c
 	for each(long ythr in Xmaxima) {
 		sum = 0;
 		count = 0;
-		for (long y = ypre; y < ythr; ++y, ++ypre) {
+		for (long y = ypre; y < ythr; ++y) {
 			for (long x = *(Ymaxima.end() - 2) + 1; x < *(Ymaxima.end() - 1); ++x) {
 				sum += img[y][x];
 				++count;
 			}
-			++ypre;
 		}
+		ypre = ythr + 1;
 		if (count != 0) {
 			mod = sum / count;
-			info.CT2MOD.push_back(mod);
+			info.CT2AVG.push_back(mod);
 		}
 	}
 
-	cout << "L1:\t";
+	for each(double var in info.L1AVG) {
+		double mod = 2 * (var - 127) / SC;
+		info.L1MOD.push_back(mod);
+	}
+	for each(double var in info.QZL1AVG) {
+		double mod = 2 * (var - 127) / SC;
+		info.QZL1MOD.push_back(mod);
+	}
+	for each(double var in info.L2AVG) {
+		double mod = 2 * (var - 127) / SC;
+		info.L2MOD.push_back(mod);
+	}
+	for each(double var in info.QZL2AVG) {
+		double mod = 2 * (var - 127) / SC;
+		info.QZL2MOD.push_back(mod);
+	}
+	for each(double var in info.SA1AVG) {
+		double mod = 2 * (var - 127) / SC;
+		info.SA1MOD.push_back(mod);
+	}
+	for each(double var in info.CT1AVG) {
+		double mod = 2 * (var - 127) / SC;
+		info.CT1MOD.push_back(mod);
+	}
+	for each(double var in info.SA2AVG) {
+		double mod = 2 * (var - 127) / SC;
+		info.SA2MOD.push_back(mod);
+	}
+	for each(double var in info.CT2AVG) {
+		double mod = 2 * (var - 127) / SC;
+		info.CT2MOD.push_back(mod);
+	}
+
+	cout << "L1AVG:\t";
+	for each(double var in info.L1AVG) {
+		cout << var << " ";
+	}
+	cout << endl;
+	cout << "QZL1AVG:\t";
+	for each(double var in info.QZL1AVG) {
+		cout << var << " ";
+	}
+	cout << endl;
+	cout << "L2AVG:\t";
+	for each(double var in info.L2AVG) {
+		cout << var << " ";
+	}
+	cout << endl;
+	cout << "QZL2AVG:\t";
+	for each(double var in info.QZL2AVG) {
+		cout << var << " ";
+	}
+	cout << endl;
+	cout << "SA1AVG:\t";
+	for each(double var in info.SA1AVG) {
+		cout << var << " ";
+	}
+	cout << endl;
+	cout << "CT1AVG:\t";
+	for each(double var in info.CT1AVG) {
+		cout << var << " ";
+	}
+	cout << endl;
+	cout << "SA2AVG:\t";
+	for each(double var in info.SA2AVG) {
+		cout << var << " ";
+	}
+	cout << endl;
+	cout << "CT2AVG:\t";
+	for each(double var in info.CT2AVG) {
+		cout << var << " ";
+	}
+	cout << endl;
+	cout << endl;
+
+	cout.precision(2);
+	cout << "**L1MOD:\t";
 	for each(double var in info.L1MOD) {
 		cout << var << " ";
 	}
 	cout << endl;
-	cout << "QZL1:\t";
+	cout << "**QZL1MOD:\t";
 	for each(double var in info.QZL1MOD) {
 		cout << var << " ";
 	}
 	cout << endl;
-	cout << "L2:\t";
+	cout << "**L2MOD:\t";
 	for each(double var in info.L2MOD) {
 		cout << var << " ";
 	}
 	cout << endl;
-	cout << "QZL2:\t";
+	cout << "**QZL2MOD:\t";
 	for each(double var in info.QZL2MOD) {
 		cout << var << " ";
 	}
 	cout << endl;
-	cout << "SA1:\t";
+	cout << "**SA1MOD:\t";
 	for each(double var in info.SA1MOD) {
 		cout << var << " ";
 	}
 	cout << endl;
-	cout << "CT1:\t";
+	cout << "**CT1MOD:\t";
 	for each(double var in info.CT1MOD) {
 		cout << var << " ";
 	}
 	cout << endl;
-	cout << "SA2:\t";
+	cout << "**SA2MOD:\t";
 	for each(double var in info.SA2MOD) {
 		cout << var << " ";
 	}
 	cout << endl;
-	cout << "CT2:\t";
+	cout << "**CT2MOD:\t";
 	for each(double var in info.CT2MOD) {
 		cout << var << " ";
 	}
 	cout << endl;
 
-	//cout << "L:" << info.leftdistance << " " << Ymaxima[1] - Ymaxima[0] << endl;
-	//cout << "D:" << info.downdistance << " " << *prev(Xmaxima.end()) - *(Xmaxima.end() - 2) << endl;
-	//cout << "T:" << info.topdistance << " " << Xmaxima[1] - Xmaxima[0] << endl;
-	//cout << "R:" << info.rightdistance << " " << *prev(Xmaxima.end()) - *(Xmaxima.end() - 2) << endl;
-
-
 }
 
-
+//-----功能入口-----
 bool Func(CImg* pImg, Grade &grade) {
 	if (pImg == NULL)
 		return false;
@@ -1015,7 +1101,7 @@ bool Func(CImg* pImg, Grade &grade) {
 	//	cout << endl;
 	//}
 
-	rt = Func_Modulation(avr, 127, grade.SC_Score, grade.MOD_Score, grade.MOD);
+	rt = Func_MinModulation(avr, 127, grade.SC_Score, grade.MOD_Score, grade.MOD);
 	if (rt == false)
 		return false;
 
@@ -1029,7 +1115,7 @@ bool Func(CImg* pImg, Grade &grade) {
 
 	//cout << "MOD:" << MOD << "\nGrade:" << Grade << endl;
 
-	Func_L(source, Xmaxima, Ymaxima, width, height);
+	Func_FPD(source, Xmaxima, Ymaxima, grade.SC_Score, width, height);
 
 	//delete
 	delete mappedx;
@@ -1065,22 +1151,21 @@ bool Func(CImg* pImg, Grade &grade) {
 	}
 	delete[] gradient;
 	gradient = NULL;
-
+  
 
 	return true;
 }
 
+//-----程序入口-----
 int main() {
 	CImg* pImg = create_image();
 	//BOOL rt = pImg->AttachFromFile("..//imgs//2-1-0.bmp");
-	BOOL rt = pImg->AttachFromFile("..//imgs//code-test-10.bmp");
+	BOOL rt = pImg->AttachFromFile("..//imgs//code-test-29.bmp");
 	if (!rt)
 		return -1;
-
 	Grade Gr;
 
 	bool rt1 = true;
-
 	rt1 = Func(pImg, Gr);
 
 	if (rt1) {
