@@ -30,10 +30,11 @@ typedef enum GradeSymbol {
 	E = 0
 }GradeSymbol;
 
-//L形区域的类型(L区域还是QZL区域)
+//L形区域的类型(L区域 QZL区域 CTSA区域)
 typedef enum LShapeAreaStyle {
 	L = 0,
-	QZL = 1
+	QZL = 1,
+	CTSA = 2
 }LSAS;
 
 //-----结构-----
@@ -145,6 +146,7 @@ typedef struct LShapeAreaInfoLQZLTable {
 
 //16022 Table M.5 CT SA SubTable(P111)
 typedef struct LShapeAreaInfoCTSATable {
+	//NO USE BUT FOR ALIGN
 	double CT_regularity_modules;
 	unsigned int CT_regularity_grade;
 	double CT_damaged_modules;
@@ -162,16 +164,30 @@ typedef struct LShapeAreaInfoCTSATable {
 	}
 }LSAI_CTSAT;
 
+//16022 Table M.5 SubTable Union(P111)
+typedef union LShapeAreaInfoSegmentGradingTable_SubTable {
+	LSAI_LQZLT LQZLT;
+	LSAI_CTSAT CTSAT;
+	LShapeAreaInfoSegmentGradingTable_SubTable() {}
+}LSAI_SGIT_ST;
+
 //16022 Table M.5 MainTable(P111)
 typedef struct LShapeAreaInfoSegmentGradingTable {
 	unsigned int MOD_grade_level;
 	unsigned int no_of_modules;
 	unsigned int cum_no_of_modules;
 	unsigned int remainder_damaged_modules;
-	union SubTab {
-		LSAI_LQZLT LQZLT;
-		LSAI_CTSAT CTSAT;
-	};
+	LSAI_SGIT_ST ST;
+	unsigned int lower_of_grades;
+
+	LShapeAreaInfoSegmentGradingTable() {
+		MOD_grade_level = 0;
+		no_of_modules = 0;
+		cum_no_of_modules = 0;
+		remainder_damaged_modules = 0;
+		lower_of_grades = 0;
+	}
+
 }LSAI_SGIT;
 
 //-----实现函数-----
@@ -236,6 +252,121 @@ bool __Func_DrawLine(unsigned char** img, vector<long > Xmaxima, vector<long > Y
 	delete[] preview;
 	preview = NULL;
 
+	return true;
+}
+
+//
+bool _Func_FPD_TransitionRatioTest(LSAI_MT MT, vector<LSAI_SGIT > &SGIT) {
+
+
+
+}
+
+//滑动大小为5的窗口判断module error //16022 P109 e
+bool _Func_FPD_CTRegularityTest(LSAI_MT MT, vector<LSAI_SGIT > &SGIT) {
+	if (MT.modinfo.size() == 0 || SGIT.size() == 0)
+		return false;
+	//当module的数量小于5的时候，窗口不需要进行滑动
+	if (MT.modinfo.size() <= 5) {
+		for (unsigned int G = 0; G < 4; ++G) {
+			if (SGIT[G].cum_no_of_modules <= MT.modinfo.size() - 1) {
+				SGIT[G].ST.CTSAT.CT_regularity_grade = GradeSymbol::E;
+			}
+			else {
+				SGIT[G].ST.CTSAT.CT_regularity_grade = GradeSymbol::A;
+			}
+		}
+	}
+	else {
+		bool endflag[4];
+		for (unsigned int i = 0; i < 4; ++i)
+			endflag[i] = false;
+
+		//当窗口在L或者QZL区域上滑动的时候，只要发现同一个窗口中存在两个或者以上的module error，那么在窗口继续滑动的时候便不需要再进行判断
+		for (vector<pair<double, GradeSymbol > >::iterator p = MT.modinfo.begin() + 4; p < MT.modinfo.end(); ++p) {
+			for (unsigned int G = 0; G < 4; ++G) {
+				if (endflag[0] == true && endflag[1] == true && endflag[2] == true && endflag[3] == true)
+					break;
+				if (endflag[G] == true)
+					continue;
+				int count = 0;
+				if ((p - 4)->second < (4 - G)) ++count;
+				if ((p - 3)->second < (4 - G)) ++count;
+				if ((p - 2)->second < (4 - G)) ++count;
+				if ((p - 1)->second < (4 - G)) ++count;
+				if (p->second < (4 - G)) ++count;
+				if (count >= 2) {
+					SGIT[G].ST.CTSAT.CT_regularity_grade = GradeSymbol::E;
+					endflag[G] = true;
+				}
+				else {
+					SGIT[G].ST.CTSAT.CT_regularity_grade = GradeSymbol::A;
+				}
+			}
+		}
+	}
+	//M5表格最后一行即等级为0的一行的Cum. no. of modules列的值一定为modules的数量，所以不需要进行判断
+	SGIT[4].ST.CTSAT.CT_regularity_grade = GradeSymbol::A;
+
+}
+
+//在CT中module error 占总module的比例 //16022 P109 f
+bool _Func_FPD_CTDamageTest(LSAI_MT MT, vector<LSAI_SGIT > &SGIT) {
+	if (MT.modinfo.size() == 0 || SGIT.size() == 0)
+		return false;
+	SGIT[0].ST.CTSAT.CT_damaged_modules = (MT.numofgradeB + MT.numofgradeC + MT.numofgradeD + MT.numofgradeE) / MT.sum;
+	SGIT[1].ST.CTSAT.CT_damaged_modules = (MT.numofgradeC + MT.numofgradeD + MT.numofgradeE) / MT.sum;
+	SGIT[2].ST.CTSAT.CT_damaged_modules = (MT.numofgradeD + MT.numofgradeE) / MT.sum;
+	SGIT[3].ST.CTSAT.CT_damaged_modules = MT.numofgradeE / MT.sum;
+	SGIT[4].ST.CTSAT.CT_damaged_modules = 0;
+
+	for (unsigned int G = 0; G <= 4; ++G) {
+		if (SGIT[G].ST.CTSAT.CT_damaged_modules < 0.1) {
+			SGIT[G].ST.CTSAT.CT_damage_grade = GradeSymbol::A;
+		}
+		else if (SGIT[G].ST.CTSAT.CT_damaged_modules < 0.15) {
+			SGIT[G].ST.CTSAT.CT_damage_grade = GradeSymbol::B;
+		}
+		else if (SGIT[G].ST.CTSAT.CT_damaged_modules < 0.20) {
+			SGIT[G].ST.CTSAT.CT_damage_grade = GradeSymbol::C;
+		}
+		else if (SGIT[G].ST.CTSAT.CT_damaged_modules < 0.25) {
+			SGIT[G].ST.CTSAT.CT_damage_grade = GradeSymbol::D;
+		}
+		else {
+			SGIT[G].ST.CTSAT.CT_damage_grade = GradeSymbol::E;
+		}
+	}
+	return true;
+}
+
+//在SA中module error 占总module的比例 //16022 P109 g
+bool _Func_FPD_SAFixedPatternTest(LSAI_MT MT, vector<LSAI_SGIT > &SGIT) {
+	if (MT.modinfo.size() == 0 || SGIT.size() == 0)
+		return false;
+	SGIT[0].ST.CTSAT.CT_damaged_modules = (MT.numofgradeB + MT.numofgradeC + MT.numofgradeD + MT.numofgradeE) / MT.sum;
+	SGIT[1].ST.CTSAT.CT_damaged_modules = (MT.numofgradeC + MT.numofgradeD + MT.numofgradeE) / MT.sum;
+	SGIT[2].ST.CTSAT.CT_damaged_modules = (MT.numofgradeD + MT.numofgradeE) / MT.sum;
+	SGIT[3].ST.CTSAT.CT_damaged_modules = MT.numofgradeE / MT.sum;
+	SGIT[4].ST.CTSAT.CT_damaged_modules = 0;
+
+	for (unsigned int G = 0; G <= 4; ++G) {
+		if (SGIT[G].ST.CTSAT.CT_damaged_modules < 0.1) {
+			SGIT[G].ST.CTSAT.CT_damage_grade = GradeSymbol::A;
+		}
+		else if (SGIT[G].ST.CTSAT.CT_damaged_modules < 0.15) {
+			SGIT[G].ST.CTSAT.CT_damage_grade = GradeSymbol::B;
+		}
+		else if (SGIT[G].ST.CTSAT.CT_damaged_modules < 0.20) {
+			SGIT[G].ST.CTSAT.CT_damage_grade = GradeSymbol::C;
+		}
+		else if (SGIT[G].ST.CTSAT.CT_damaged_modules < 0.25) {
+			SGIT[G].ST.CTSAT.CT_damage_grade = GradeSymbol::D;
+		}
+		else {
+			SGIT[G].ST.CTSAT.CT_damage_grade = GradeSymbol::E;
+		}
+	}
 	return true;
 }
 
@@ -327,13 +458,107 @@ bool _Func_FPD_TM4(vector<double > info, LSAI_MT &MT, LSAS style) {
 	return false;
 }
 
+//16022 Table M.5 Init
+bool _Func_FPD_TM5_Init(vector<LSAI_SGIT > &SGIT) {
+	for (int g = 4; g >= 0; --g) {
+		LSAI_SGIT row;
+		row.MOD_grade_level = g;
+		row.no_of_modules = 0;
+		row.cum_no_of_modules = 0;
+		row.remainder_damaged_modules = 0;
+		SGIT.push_back(row);
+	}
+	return true;
+}
+
 //16022 Table M.5 Create
-bool _Func_FPD_TM5(LSAI_MT info, LSAI_SGIT &SGIT, LSAS style) {
-	if (style == LSAS::L) {
+bool _Func_FPD_TM5_Edit(LSAI_MT info, vector<LSAI_SGIT > &SGIT, LSAS style) {
+	//当区域为L或者QZL时，子表格有1项2列
+	if (style == LSAS::L || style == LSAS::QZL) {
+		//4 填写表格第2列到第5列
+		SGIT[0].no_of_modules = info.numofgradeA;
+		SGIT[0].cum_no_of_modules = info.numofgradeA;
+		SGIT[0].remainder_damaged_modules = info.sum - SGIT[0].cum_no_of_modules;
+		SGIT[0].ST.LQZLT.damaged_modules = SGIT[0].remainder_damaged_modules / info.sum;
+
+		//3
+		SGIT[1].no_of_modules = info.numofgradeB;
+		SGIT[1].cum_no_of_modules = info.numofgradeA + info.numofgradeB;
+		SGIT[1].remainder_damaged_modules = info.sum - SGIT[1].cum_no_of_modules;
+		SGIT[1].ST.LQZLT.damaged_modules = SGIT[1].remainder_damaged_modules / info.sum;
+
+		//2
+		SGIT[2].no_of_modules = info.numofgradeC;
+		SGIT[2].cum_no_of_modules = info.numofgradeA + info.numofgradeB + info.numofgradeC;
+		SGIT[2].remainder_damaged_modules = info.sum - SGIT[2].cum_no_of_modules;
+		SGIT[2].ST.LQZLT.damaged_modules = SGIT[2].remainder_damaged_modules / info.sum;
+
+		//1
+		SGIT[3].no_of_modules = info.numofgradeD;
+		SGIT[3].cum_no_of_modules = info.numofgradeA + info.numofgradeB + info.numofgradeC + info.numofgradeD;
+		SGIT[3].remainder_damaged_modules = info.sum - SGIT[3].cum_no_of_modules;
+		SGIT[3].ST.LQZLT.damaged_modules = SGIT[3].remainder_damaged_modules / info.sum;
+
+		//0
+		SGIT[4].no_of_modules = info.numofgradeE;
+		SGIT[4].cum_no_of_modules = info.sum;
+		SGIT[4].remainder_damaged_modules = 0;
+		SGIT[4].ST.LQZLT.damaged_modules = SGIT[4].remainder_damaged_modules / info.sum;
+
+		//按照M.1表获得等级，并填到表格第6列
+		for (unsigned int G = 0; G <= 4; ++G) {
+			if (SGIT[G].ST.LQZLT.damaged_modules = 0) {
+				SGIT[G].ST.LQZLT.notional_damage_grade = GradeSymbol::A;
+			}
+			else if (SGIT[G].ST.LQZLT.damaged_modules <= 0.09) {
+				SGIT[G].ST.LQZLT.notional_damage_grade = GradeSymbol::B;
+			}
+			else if (SGIT[G].ST.LQZLT.damaged_modules <= 0.13) {
+				SGIT[G].ST.LQZLT.notional_damage_grade = GradeSymbol::C;
+			}
+			else if (SGIT[G].ST.LQZLT.damaged_modules <= 0.17) {
+				SGIT[G].ST.LQZLT.notional_damage_grade = GradeSymbol::D;
+			}
+			else if (SGIT[G].ST.LQZLT.damaged_modules > 0.17) {
+				SGIT[G].ST.LQZLT.notional_damage_grade = GradeSymbol::E;
+			}
+
+			//将等级较小值填到表格第7列
+			SGIT[G].lower_of_grades = SGIT[G].ST.LQZLT.notional_damage_grade < SGIT[G].MOD_grade_level ? SGIT[G].ST.LQZLT.notional_damage_grade : SGIT[G].MOD_grade_level;
+		}
 
 		return true;
 	}
-	if (style == LSAS::QZL) {
+	//当区域为CT或者SA时，子表格有3项6列
+	else if (style == LSAS::CTSA) {
+		//4 填写第2列到第4列的数据
+		SGIT[0].no_of_modules = info.numofgradeA;
+		SGIT[0].cum_no_of_modules = info.numofgradeA;
+		SGIT[0].remainder_damaged_modules = info.sum - SGIT[0].cum_no_of_modules;
+
+		//3
+		SGIT[1].no_of_modules = info.numofgradeB;
+		SGIT[1].cum_no_of_modules = info.numofgradeA + info.numofgradeB;
+		SGIT[1].remainder_damaged_modules = info.sum - SGIT[1].cum_no_of_modules;
+
+		//2
+		SGIT[2].no_of_modules = info.numofgradeC;
+		SGIT[2].cum_no_of_modules = info.numofgradeA + info.numofgradeB + info.numofgradeC;
+		SGIT[2].remainder_damaged_modules = info.sum - SGIT[2].cum_no_of_modules;
+
+		//1
+		SGIT[3].no_of_modules = info.numofgradeD;
+		SGIT[3].cum_no_of_modules = info.numofgradeA + info.numofgradeB + info.numofgradeC + info.numofgradeD;
+		SGIT[3].remainder_damaged_modules = info.sum - SGIT[3].cum_no_of_modules;
+
+		//0
+		SGIT[4].no_of_modules = info.numofgradeE;
+		SGIT[4].cum_no_of_modules = info.sum;
+		SGIT[4].remainder_damaged_modules = 0;
+
+		//填写子表格的数据
+
+
 
 		return true;
 	}
@@ -867,6 +1092,7 @@ bool Func_FPD(unsigned char** img, vector<long > Xmaxima, vector<long > Ymaxima,
 		return false;
 	LSAI info;
 
+	//获得QZL1、QZL2、SA1、SA2 的实际宽度
 	if (*Ymaxima.begin() - 0 > Ymaxima[1] - Ymaxima[0])
 		info.leftdistance = Ymaxima[1] - Ymaxima[0];
 	else
@@ -892,9 +1118,9 @@ bool Func_FPD(unsigned char** img, vector<long > Xmaxima, vector<long > Ymaxima,
 	info.CT1height = Xmaxima[1] - Xmaxima[0];
 	info.CT2width = *prev(Xmaxima.end()) - *(Xmaxima.end() - 2);
 
+
 	long xpre, ypre, sum, count;
 	double mod;
-
 
 	//QZL1
 	ypre = Xmaxima[0] - info.topdistance + 1;
@@ -1082,6 +1308,7 @@ bool Func_FPD(unsigned char** img, vector<long > Xmaxima, vector<long > Ymaxima,
 		}
 	}
 
+	//计算各module的MOD值并存储
 	for each(double var in info.L1AVG) {
 		double mod = 2 * (var - GT) / SC;
 		info.L1MOD.push_back(mod);
@@ -1202,16 +1429,13 @@ bool Func_FPD(unsigned char** img, vector<long > Xmaxima, vector<long > Ymaxima,
 		cout.precision(6);
 	}
 
-	cout << endl;
-	LSAI_MT modinfo;
-	_Func_FPD_TM4(info.L1MOD, modinfo, LSAS::L);
 
+	//L1
+	LSAI_MT L1_modinfotab;//M4
+	_Func_FPD_TM4(info.L1MOD, L1_modinfotab, LSAS::L);
+	vector<LSAI_SGIT > L1_seggradingtab;//M5
+	_Func_FPD_TM5_Init(L1_seggradingtab);
 
-	cout << "A:" << modinfo.numofgradeA << " B:" << modinfo.numofgradeB << " C:" << modinfo.numofgradeC << " D:" << modinfo.numofgradeD << " E:" << modinfo.numofgradeE << endl;
-	cout << "SUM:" << modinfo.sum << endl;
-	for each(auto var in modinfo.modinfo) {
-		cout << "MOD:" << var.first << " GRADE:" << var.second << endl;
-	}
 
 }
 
