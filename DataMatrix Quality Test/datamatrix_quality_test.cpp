@@ -19,7 +19,7 @@
 
 using namespace std;
 
-//-----结构-----
+//-----枚举-----
 
 //评级等级符号及其对应分数
 typedef enum GradeSymbol {
@@ -29,6 +29,14 @@ typedef enum GradeSymbol {
 	D = 1,
 	E = 0
 }GradeSymbol;
+
+//L形区域的类型(L区域还是QZL区域)
+typedef enum LShapeAreaStyle {
+	L = 0,
+	QZL = 1
+}LSAS;
+
+//-----结构-----
 
 //各项等级评分数据以及等级
 typedef struct Grade {
@@ -50,7 +58,7 @@ typedef struct Grade {
 
 }Grade;
 
-//L形区域即几个静态区域的单元MOD数据
+//L形区域即几个静态区域的单元像素均值以及MOD数据
 typedef struct LShapeAreaInfo {
 	unsigned long leftdistance;
 	unsigned long downdistance;
@@ -76,11 +84,99 @@ typedef struct LShapeAreaInfo {
 	vector<double > SA1MOD;
 	vector<double > CT2MOD;
 	vector<double > SA2MOD;
+	LShapeAreaInfo() {
+		leftdistance = 0;
+		downdistance = 0;
+		topdistance = 0;
+		rightdistance = 0;
+		L1width = 0;
+		CT1height = 0;
+		L2height = 0;
+		CT2width = 0;
+		QZL1AVG.clear();
+		L1AVG.clear();
+		QZL2AVG.clear();
+		L2AVG.clear();
+		CT1AVG.clear();
+		SA1AVG.clear();
+		CT2AVG.clear();
+		SA2AVG.clear();
+		QZL1MOD.clear();
+		L1MOD.clear();
+		QZL2MOD.clear();
+		L2MOD.clear();
+		CT1MOD.clear();
+		SA1MOD.clear();
+		CT2MOD.clear();
+		SA2MOD.clear();
+	}
 } LSAI;
+
+//16022 Table M.4(P111)
+typedef struct LShapeAreaInfoMODTable {
+	unsigned int sum;
+	unsigned int numofgradeE;
+	unsigned int numofgradeD;
+	unsigned int numofgradeC;
+	unsigned int numofgradeB;
+	unsigned int numofgradeA;
+	vector<pair<double, GradeSymbol > > modinfo;
+
+	LShapeAreaInfoMODTable() {
+		sum = 0;
+		numofgradeE = 0;
+		numofgradeD = 0;
+		numofgradeC = 0;
+		numofgradeB = 0;
+		numofgradeA = 0;
+	}
+
+}LSAI_MT;
+
+//16022 Table M.5 L QZL SubTable(P111)
+typedef struct LShapeAreaInfoLQZLTable {
+	double damaged_modules;
+	unsigned int notional_damage_grade;
+	LShapeAreaInfoLQZLTable() {
+		damaged_modules = 0;
+		notional_damage_grade = 0;
+	}
+}LSAI_LQZLT;
+
+//16022 Table M.5 CT SA SubTable(P111)
+typedef struct LShapeAreaInfoCTSATable {
+	double CT_regularity_modules;
+	unsigned int CT_regularity_grade;
+	double CT_damaged_modules;
+	unsigned int CT_damage_grade;
+	double SA_damaged_modules;
+	unsigned int SA_damage_grade;
+
+	LShapeAreaInfoCTSATable() {
+		CT_regularity_modules = 0;
+		CT_regularity_grade = 0;
+		CT_damaged_modules = 0;
+		CT_damage_grade = 0;
+		SA_damaged_modules = 0;
+		SA_damage_grade = 0;
+	}
+}LSAI_CTSAT;
+
+//16022 Table M.5 MainTable(P111)
+typedef struct LShapeAreaInfoSegmentGradingTable {
+	unsigned int MOD_grade_level;
+	unsigned int no_of_modules;
+	unsigned int cum_no_of_modules;
+	unsigned int remainder_damaged_modules;
+	union SubTab {
+		LSAI_LQZLT LQZLT;
+		LSAI_CTSAT CTSAT;
+	};
+}LSAI_SGIT;
 
 //-----实现函数-----
 
-//获取当前的系统时间以创建文件名
+//获取当前的系统时间以创建文件名（仅供调试输出使用）
 string NowTimeToFileName(const string preStr, const string suffixalNameStr) {
 	static string pastTime;
 	time_t t = time(NULL);
@@ -106,7 +202,7 @@ string NowTimeToFileName(const string preStr, const string suffixalNameStr) {
 }
 
 //根据得到的波峰点位绘制网格（仅供调试输出中间结果）
-bool _Func_DrawLine(unsigned char** img, vector<long > Xmaxima, vector<long > Ymaxima, const long width, const long height, const unsigned char color) {
+bool __Func_DrawLine(unsigned char** img, vector<long > Xmaxima, vector<long > Ymaxima, const long width, const long height, const unsigned char color) {
 	if (img == NULL || Xmaxima.size() == 0 || Ymaxima.size() == 0)
 		return false;
 	unsigned char** preview = new unsigned char*[height];
@@ -143,8 +239,109 @@ bool _Func_DrawLine(unsigned char** img, vector<long > Xmaxima, vector<long > Ym
 	return true;
 }
 
+//16022 Table M.4 Create
+bool _Func_FPD_TM4(vector<double > info, LSAI_MT &MT, LSAS style) {
+	if (style == LSAS::L) {
+		for each(double mod in info) {
+			++MT.sum;
+			mod = -mod;
+			if (mod >= 0.5) {
+				++MT.numofgradeA;
+				pair<double, GradeSymbol> ipa;
+				ipa.first = -mod;
+				ipa.second = GradeSymbol::A;
+				MT.modinfo.push_back(ipa);
+			}
+			else if (mod >= 0.4) {
+				++MT.numofgradeB;
+				pair<double, GradeSymbol> ipa;
+				ipa.first = -mod;
+				ipa.second = GradeSymbol::B;
+				MT.modinfo.push_back(ipa);
+			}
+			else if (mod >= 0.3) {
+				++MT.numofgradeC;
+				pair<double, GradeSymbol> ipa;
+				ipa.first = -mod;
+				ipa.second = GradeSymbol::C;
+				MT.modinfo.push_back(ipa);
+			}
+			else if (mod >= 0.2) {
+				++MT.numofgradeD;
+				pair<double, GradeSymbol> ipa;
+				ipa.first = -mod;
+				ipa.second = GradeSymbol::D;
+				MT.modinfo.push_back(ipa);
+			}
+			else {
+				++MT.numofgradeE;
+				pair<double, GradeSymbol> ipa;
+				ipa.first = -mod;
+				ipa.second = GradeSymbol::E;
+				MT.modinfo.push_back(ipa);
+			}
+		}
+		return true;
+	}
+	if (style == LSAS::QZL) {
+		for each(double mod in info) {
+			++MT.sum;
+			if (mod >= 0.5) {
+				++MT.numofgradeA;
+				pair<double, GradeSymbol> ipa;
+				ipa.first = mod;
+				ipa.second = GradeSymbol::A;
+				MT.modinfo.push_back(ipa);
+			}
+			else if (mod >= 0.4) {
+				++MT.numofgradeB;
+				pair<double, GradeSymbol> ipa;
+				ipa.first = mod;
+				ipa.second = GradeSymbol::B;
+				MT.modinfo.push_back(ipa);
+			}
+			else if (mod >= 0.3) {
+				++MT.numofgradeC;
+				pair<double, GradeSymbol> ipa;
+				ipa.first = mod;
+				ipa.second = GradeSymbol::C;
+				MT.modinfo.push_back(ipa);
+			}
+			else if (mod >= 0.2) {
+				++MT.numofgradeD;
+				pair<double, GradeSymbol> ipa;
+				ipa.first = mod;
+				ipa.second = GradeSymbol::D;
+				MT.modinfo.push_back(ipa);
+			}
+			else {
+				++MT.numofgradeE;
+				pair<double, GradeSymbol> ipa;
+				ipa.first = mod;
+				ipa.second = GradeSymbol::E;
+				MT.modinfo.push_back(ipa);
+			}
+		}
+		return true;
+	}
+	return false;
+}
+
+//16022 Table M.5 Create
+bool _Func_FPD_TM5(LSAI_MT info, LSAI_SGIT &SGIT, LSAS style) {
+	if (style == LSAS::L) {
+
+		return true;
+	}
+	if (style == LSAS::QZL) {
+
+		return true;
+	}
+	return false;
+}
+
 //计算SC值
-bool Func_SC(unsigned char* pBuffer, const long width, const long height, double &SC, GradeSymbol &Grade) {
+bool Func_SC(unsigned char* pBuffer, const long width, const long height, double &SC, double &GT, GradeSymbol &Grade) {
 	if (pBuffer == NULL)
 		return false;
 	if (width == 0 || height == 0)
@@ -204,6 +401,8 @@ bool Func_SC(unsigned char* pBuffer, const long width, const long height, double
 
 	SC = avggreater - avglower;
 
+	GT = (avglower + avggreater) / 2;
+
 	double score;
 	score = 1.0 * SC / avggreater;
 
@@ -227,7 +426,7 @@ bool Func_SC(unsigned char* pBuffer, const long width, const long height, double
 }
 
 //计算SC值
-bool Func_SC(unsigned char** pBuffer, const long width, const long height, double &SC, GradeSymbol &Grade) {
+bool Func_SC(unsigned char** pBuffer, const long width, const long height, double &SC, double &GT, GradeSymbol &Grade) {
 	if (pBuffer == NULL)
 		return false;
 	if (width == 0 || height == 0)
@@ -290,6 +489,8 @@ bool Func_SC(unsigned char** pBuffer, const long width, const long height, doubl
 	double avggreater = (double)sum / count;
 
 	SC = avggreater - avglower;
+
+	GT = (avglower + avggreater) / 2;
 
 	double score;
 	score = 1.0 * (avggreater - avglower) / avggreater;
@@ -550,7 +751,7 @@ bool Func_ModuleAvg(unsigned char** img, vector<long > Xmaxima, vector<long > Ym
 }
 
 //求全图最小MOD值
-bool Func_MinModulation(vector<vector<unsigned char > > R, const unsigned char GT, const double SC, double &mod, GradeSymbol &grade) {
+bool Func_MinModulation(vector<vector<unsigned char > > R, const double GT, const double SC, double &mod, GradeSymbol &grade) {
 	if (R.size() == 0 || SC == 0)
 		return false;
 	double min = 1;
@@ -661,7 +862,7 @@ bool Func_GN(vector<long > Xmaxima, vector<long > Ymaxima, double &score, GradeS
 }
 
 //L形区域以及反L形区域的各单元像素均值与MOD值计算
-bool Func_FPD(unsigned char** img, vector<long > Xmaxima, vector<long > Ymaxima, const double SC, const long width, const long height) {
+bool Func_FPD(unsigned char** img, vector<long > Xmaxima, vector<long > Ymaxima, const double SC, const double GT, const long width, const long height) {
 	if (img == NULL || Xmaxima.size() < 2 || Ymaxima.size() < 2)
 		return false;
 	LSAI info;
@@ -882,121 +1083,135 @@ bool Func_FPD(unsigned char** img, vector<long > Xmaxima, vector<long > Ymaxima,
 	}
 
 	for each(double var in info.L1AVG) {
-		double mod = 2 * (var - 127) / SC;
+		double mod = 2 * (var - GT) / SC;
 		info.L1MOD.push_back(mod);
 	}
 	for each(double var in info.QZL1AVG) {
-		double mod = 2 * (var - 127) / SC;
+		double mod = 2 * (var - GT) / SC;
 		info.QZL1MOD.push_back(mod);
 	}
 	for each(double var in info.L2AVG) {
-		double mod = 2 * (var - 127) / SC;
+		double mod = 2 * (var - GT) / SC;
 		info.L2MOD.push_back(mod);
 	}
 	for each(double var in info.QZL2AVG) {
-		double mod = 2 * (var - 127) / SC;
+		double mod = 2 * (var - GT) / SC;
 		info.QZL2MOD.push_back(mod);
 	}
 	for each(double var in info.SA1AVG) {
-		double mod = 2 * (var - 127) / SC;
+		double mod = 2 * (var - GT) / SC;
 		info.SA1MOD.push_back(mod);
 	}
 	for each(double var in info.CT1AVG) {
-		double mod = 2 * (var - 127) / SC;
+		double mod = 2 * (var - GT) / SC;
 		info.CT1MOD.push_back(mod);
 	}
 	for each(double var in info.SA2AVG) {
-		double mod = 2 * (var - 127) / SC;
+		double mod = 2 * (var - GT) / SC;
 		info.SA2MOD.push_back(mod);
 	}
 	for each(double var in info.CT2AVG) {
-		double mod = 2 * (var - 127) / SC;
+		double mod = 2 * (var - GT) / SC;
 		info.CT2MOD.push_back(mod);
 	}
 
-	cout << "L1AVG:\t";
-	for each(double var in info.L1AVG) {
-		cout << var << " ";
-	}
-	cout << endl;
-	cout << "QZL1AVG:\t";
-	for each(double var in info.QZL1AVG) {
-		cout << var << " ";
-	}
-	cout << endl;
-	cout << "L2AVG:\t";
-	for each(double var in info.L2AVG) {
-		cout << var << " ";
-	}
-	cout << endl;
-	cout << "QZL2AVG:\t";
-	for each(double var in info.QZL2AVG) {
-		cout << var << " ";
-	}
-	cout << endl;
-	cout << "SA1AVG:\t";
-	for each(double var in info.SA1AVG) {
-		cout << var << " ";
-	}
-	cout << endl;
-	cout << "CT1AVG:\t";
-	for each(double var in info.CT1AVG) {
-		cout << var << " ";
-	}
-	cout << endl;
-	cout << "SA2AVG:\t";
-	for each(double var in info.SA2AVG) {
-		cout << var << " ";
-	}
-	cout << endl;
-	cout << "CT2AVG:\t";
-	for each(double var in info.CT2AVG) {
-		cout << var << " ";
-	}
-	cout << endl;
-	cout << endl;
+	{
+		cout << "L1AVG:\t";
+		for each(double var in info.L1AVG) {
+			cout << var << " ";
+		}
+		cout << endl;
+		cout << "QZL1AVG:\t";
+		for each(double var in info.QZL1AVG) {
+			cout << var << " ";
+		}
+		cout << endl;
+		cout << "L2AVG:\t";
+		for each(double var in info.L2AVG) {
+			cout << var << " ";
+		}
+		cout << endl;
+		cout << "QZL2AVG:\t";
+		for each(double var in info.QZL2AVG) {
+			cout << var << " ";
+		}
+		cout << endl;
+		cout << "SA1AVG:\t";
+		for each(double var in info.SA1AVG) {
+			cout << var << " ";
+		}
+		cout << endl;
+		cout << "CT1AVG:\t";
+		for each(double var in info.CT1AVG) {
+			cout << var << " ";
+		}
+		cout << endl;
+		cout << "SA2AVG:\t";
+		for each(double var in info.SA2AVG) {
+			cout << var << " ";
+		}
+		cout << endl;
+		cout << "CT2AVG:\t";
+		for each(double var in info.CT2AVG) {
+			cout << var << " ";
+		}
+		cout << endl;
+		cout << endl;
 
-	cout.precision(2);
-	cout << "**L1MOD:\t";
-	for each(double var in info.L1MOD) {
-		cout << var << " ";
+		cout.precision(2);
+		cout << "**L1MOD:\t";
+		for each(double var in info.L1MOD) {
+			cout << var << " ";
+		}
+		cout << endl;
+		cout << "**QZL1MOD:\t";
+		for each(double var in info.QZL1MOD) {
+			cout << var << " ";
+		}
+		cout << endl;
+		cout << "**L2MOD:\t";
+		for each(double var in info.L2MOD) {
+			cout << var << " ";
+		}
+		cout << endl;
+		cout << "**QZL2MOD:\t";
+		for each(double var in info.QZL2MOD) {
+			cout << var << " ";
+		}
+		cout << endl;
+		cout << "**SA1MOD:\t";
+		for each(double var in info.SA1MOD) {
+			cout << var << " ";
+		}
+		cout << endl;
+		cout << "**CT1MOD:\t";
+		for each(double var in info.CT1MOD) {
+			cout << var << " ";
+		}
+		cout << endl;
+		cout << "**SA2MOD:\t";
+		for each(double var in info.SA2MOD) {
+			cout << var << " ";
+		}
+		cout << endl;
+		cout << "**CT2MOD:\t";
+		for each(double var in info.CT2MOD) {
+			cout << var << " ";
+		}
+		cout << endl;
+		cout.precision(6);
 	}
+
 	cout << endl;
-	cout << "**QZL1MOD:\t";
-	for each(double var in info.QZL1MOD) {
-		cout << var << " ";
+	LSAI_MT modinfo;
+	_Func_FPD_TM4(info.L1MOD, modinfo, LSAS::L);
+
+
+	cout << "A:" << modinfo.numofgradeA << " B:" << modinfo.numofgradeB << " C:" << modinfo.numofgradeC << " D:" << modinfo.numofgradeD << " E:" << modinfo.numofgradeE << endl;
+	cout << "SUM:" << modinfo.sum << endl;
+	for each(auto var in modinfo.modinfo) {
+		cout << "MOD:" << var.first << " GRADE:" << var.second << endl;
 	}
-	cout << endl;
-	cout << "**L2MOD:\t";
-	for each(double var in info.L2MOD) {
-		cout << var << " ";
-	}
-	cout << endl;
-	cout << "**QZL2MOD:\t";
-	for each(double var in info.QZL2MOD) {
-		cout << var << " ";
-	}
-	cout << endl;
-	cout << "**SA1MOD:\t";
-	for each(double var in info.SA1MOD) {
-		cout << var << " ";
-	}
-	cout << endl;
-	cout << "**CT1MOD:\t";
-	for each(double var in info.CT1MOD) {
-		cout << var << " ";
-	}
-	cout << endl;
-	cout << "**SA2MOD:\t";
-	for each(double var in info.SA2MOD) {
-		cout << var << " ";
-	}
-	cout << endl;
-	cout << "**CT2MOD:\t";
-	for each(double var in info.CT2MOD) {
-		cout << var << " ";
-	}
-	cout << endl;
 
 }
 
@@ -1057,9 +1272,10 @@ bool Func(CImg* pImg, Grade &grade) {
 	}
 
 	//action
+	double GT;
 
 	bool rt = true;
-	rt = Func_SC(source, width, height, grade.SC_Score, grade.SC);
+	rt = Func_SC(source, width, height, grade.SC_Score, GT, grade.SC);
 	if (rt == false)
 		return false;
 	//cout << SC << endl;
@@ -1087,7 +1303,7 @@ bool Func(CImg* pImg, Grade &grade) {
 	rt = Func_CompareHill(aftermx, aftermy, Xmaxima, Ymaxima, width, height);
 	if (rt == false)
 		return false;
-	rt = _Func_DrawLine(source, Xmaxima, Ymaxima, width, height, 0xDD);
+	rt = __Func_DrawLine(source, Xmaxima, Ymaxima, width, height, 0xDD);
 	if (rt == false)
 		return false;
 	vector<vector<unsigned char > > avr;
@@ -1101,7 +1317,7 @@ bool Func(CImg* pImg, Grade &grade) {
 	//	cout << endl;
 	//}
 
-	rt = Func_MinModulation(avr, 127, grade.SC_Score, grade.MOD_Score, grade.MOD);
+	rt = Func_MinModulation(avr, GT, grade.SC_Score, grade.MOD_Score, grade.MOD);
 	if (rt == false)
 		return false;
 
@@ -1115,7 +1331,9 @@ bool Func(CImg* pImg, Grade &grade) {
 
 	//cout << "MOD:" << MOD << "\nGrade:" << Grade << endl;
 
-	Func_FPD(source, Xmaxima, Ymaxima, grade.SC_Score, width, height);
+	Func_FPD(source, Xmaxima, Ymaxima, grade.SC_Score, GT, width, height);
+
+	cout << "\nGT:" << GT << endl;
 
 	//delete
 	delete mappedx;
@@ -1151,7 +1369,7 @@ bool Func(CImg* pImg, Grade &grade) {
 	}
 	delete[] gradient;
 	gradient = NULL;
-  
+
 
 	return true;
 }
@@ -1160,7 +1378,7 @@ bool Func(CImg* pImg, Grade &grade) {
 int main() {
 	CImg* pImg = create_image();
 	//BOOL rt = pImg->AttachFromFile("..//imgs//2-1-0.bmp");
-	BOOL rt = pImg->AttachFromFile("..//imgs//code-test-29.bmp");
+	BOOL rt = pImg->AttachFromFile("..//imgs//code-test-7.bmp");
 	if (!rt)
 		return -1;
 	Grade Gr;
