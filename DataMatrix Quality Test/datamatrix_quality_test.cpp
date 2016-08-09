@@ -52,10 +52,11 @@ typedef struct Grade {
 	GradeSymbol FPD;
 
 	Grade() {
-		SC = E;		SC_Score = 0;
-		MOD = E;
-		AN = E;		AN_Score = 0;
-		GN = E;		GN_Score = 0;
+		SC = GradeSymbol::E;		SC_Score = 0;
+		MOD = GradeSymbol::E;
+		AN = GradeSymbol::E;		AN_Score = 0;
+		GN = GradeSymbol::E;		GN_Score = 0;
+		FPD = GradeSymbol::E;
 	}
 
 }Grade;
@@ -355,7 +356,7 @@ bool __Func_Display_M5(vector<LSAI_SGIT > SGIT, LSAS style) {
 bool __Func_Display_T7A(vector<MOD_GIT > MODGIT) {
 	cout << "MOD.C.G.L" << "\tNo.C.L" << "\tC.No.C" << "\tR.C" << "\tN.U.ECC" << "\tN.UEC" << "\tN.UEC.G" << "\tL.G" << endl;
 	for (unsigned int G = 0; G <= 4; ++G) {
-		cout << MODGIT[G].MOD_codeword_grade_level << "\t" << MODGIT[G].No_of_codewords_at_level_a << "\t" << MODGIT[G].cumulative_no_of_codewords_at_level_a_or_higher 
+		cout << MODGIT[G].MOD_codeword_grade_level << "\t" << MODGIT[G].No_of_codewords_at_level_a << "\t" << MODGIT[G].cumulative_no_of_codewords_at_level_a_or_higher
 			<< "\t" << MODGIT[G].remaining_codewords << "\t" << MODGIT[G].notional_unused_error_correction_capacity
 			<< "\t" << MODGIT[G].notional_UEC << "\t" << MODGIT[G].notional_UEC_grade
 			<< "\t" << MODGIT[G].lower_of_a_or_d << endl;
@@ -965,19 +966,19 @@ bool Func_SC(unsigned char* pBuffer, const long width, const long height, double
 	score = 1.0 * SC / avggreater;
 
 	if (score >= 0.7) {
-		Grade = A;
+		Grade = GradeSymbol::A;
 	}
 	else if (score >= 0.55) {
-		Grade = B;
+		Grade = GradeSymbol::B;
 	}
 	else if (score >= 0.4) {
-		Grade = C;
+		Grade = GradeSymbol::C;
 	}
 	else if (score >= 0.2) {
-		Grade = D;
+		Grade = GradeSymbol::D;
 	}
 	else {
-		Grade = E;
+		Grade = GradeSymbol::E;
 	}
 
 	return true;
@@ -1310,9 +1311,11 @@ bool Func_ModuleAvg(unsigned char** img, vector<long > Xmaxima, vector<long > Ym
 
 //求全图数据区MOD值等级
 bool Func_MOD_DataAreaModulation(vector<vector<unsigned char > > R, MOD_DAMIT &DataAreaMODGradeTable, const double GT, const double SC) {
-	if (R.size() < 2 || SC == 0)
+	if (R.size() < 4 || SC == 0)
 		return false;
 	for (vector<vector<unsigned char > >::iterator p = R.begin() + 2; p != R.end() - 2; ++p) {
+		if (p->size() < 4)
+			return false;
 		for (vector<unsigned char >::iterator pp = p->begin() + 2; pp != p->end() - 2; ++pp) {
 			++DataAreaMODGradeTable.sum;
 			double temp = 2.00 * (double)abs(*pp - GT) / SC;
@@ -1385,19 +1388,19 @@ bool Func_AN(vector<long > Xmaxima, vector<long > Ymaxima, double &score, GradeS
 	score = abs(xavg - yavg) / ((xavg + yavg)*2.0);
 
 	if (score > 0.12) {
-		grade = E;
+		grade = GradeSymbol::E;
 	}
 	if (score <= 0.12) {
-		grade = D;
+		grade = GradeSymbol::D;
 	}
 	if (score <= 0.1) {
-		grade = C;
+		grade = GradeSymbol::C;
 	}
 	if (score <= 0.08) {
-		grade = B;
+		grade = GradeSymbol::B;
 	}
 	if (score <= 0.06) {
-		grade = A;
+		grade = GradeSymbol::A;
 	}
 
 	return true;
@@ -1434,19 +1437,19 @@ bool Func_GN(vector<long > Xmaxima, vector<long > Ymaxima, double &score, GradeS
 	score = sqrt((xmaxdistance*xmaxdistance) + (ymaxdistance*ymaxdistance)) / xavg/*sqrt((xavg*xavg) + (yavg*yavg))*/;
 
 	if (score > 0.75) {
-		grade = E;
+		grade = GradeSymbol::E;
 	}
 	if (score <= 0.75) {
-		grade = D;
+		grade = GradeSymbol::D;
 	}
 	if (score <= 0.63) {
-		grade = C;
+		grade = GradeSymbol::C;
 	}
 	if (score <= 0.50) {
-		grade = B;
+		grade = GradeSymbol::B;
 	}
 	if (score <= 0.38) {
-		grade = A;
+		grade = GradeSymbol::A;
 	}
 
 	return true;
@@ -2042,16 +2045,17 @@ bool Func(CImg* pImg, const unsigned int error_correction_capacity, Grade &grade
 		return false;
 
 	MOD_DAMIT DataAreaMODInfo;
-	rt = Func_MOD_DataAreaModulation(avr, DataAreaMODInfo, GT, grade.SC_Score);
-	if (rt == false)
-		return false;
-
 	vector<MOD_GIT> MODGradingTable;
-	grade.MOD = _Func_MOD_T7A(DataAreaMODInfo, MODGradingTable, error_correction_capacity);
-
+	rt = Func_MOD_DataAreaModulation(avr, DataAreaMODInfo, GT, grade.SC_Score);
+	if (rt != false) {
+		grade.MOD = _Func_MOD_T7A(DataAreaMODInfo, MODGradingTable, error_correction_capacity);
 #ifdef _DEBUG
-	__Func_Display_T7A(MODGradingTable);
+		//__Func_Display_T7A(MODGradingTable);
 #endif
+	}
+	else {
+		grade.MOD = GradeSymbol::E;
+	}
 
 	rt = Func_AN(Xmaxima, Ymaxima, grade.AN_Score, grade.AN);
 	if (rt == false)
@@ -2112,7 +2116,7 @@ bool Func(CImg* pImg, const unsigned int error_correction_capacity, Grade &grade
 int main() {
 	CImg* pImg = create_image();
 	//BOOL rt = pImg->AttachFromFile("..//imgs//2-1-0.bmp");
-	BOOL rt = pImg->AttachFromFile("..//imgs//code-test-1.bmp");
+	BOOL rt = pImg->AttachFromFile("..//imgs//code-test-31.bmp");
 	if (!rt)
 		return -1;
 	Grade Gr;
@@ -2120,15 +2124,11 @@ int main() {
 	bool rt1 = true;
 	rt1 = Func(pImg, 3, Gr);
 
-	if (rt1) {
-		cout << "\nSC_Score = " << Gr.SC_Score << "\tSC_Grade = " << Gr.SC << endl;
-		cout << "MOD_Grade = " << Gr.MOD << endl;
-		cout << "AN_Score = " << Gr.AN_Score << "\tAN_Grade = " << Gr.AN << endl;
-		cout << "GN_Score = " << Gr.GN_Score << "\tGN_Grade = " << Gr.GN << endl;
-		cout << "FPD = " << Gr.FPD << endl;
-	}
-	else
-		return -2;
+	cout << "\nSC_Score = " << Gr.SC_Score << "\tSC_Grade = " << Gr.SC << endl;
+	cout << "MOD_Grade = " << Gr.MOD << endl;
+	cout << "AN_Score = " << Gr.AN_Score << "\tAN_Grade = " << Gr.AN << endl;
+	cout << "GN_Score = " << Gr.GN_Score << "\tGN_Grade = " << Gr.GN << endl;
+	cout << "FPD = " << Gr.FPD << endl;
 
 	getchar();
 	return 0;
