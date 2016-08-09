@@ -45,7 +45,6 @@ typedef struct Grade {
 	GradeSymbol SC;
 	double SC_Score;
 	GradeSymbol MOD;
-	double MOD_Score;
 	GradeSymbol AN;
 	double AN_Score;
 	GradeSymbol GN;
@@ -54,7 +53,7 @@ typedef struct Grade {
 
 	Grade() {
 		SC = E;		SC_Score = 0;
-		MOD = E;	MOD_Score = 0;
+		MOD = E;
 		AN = E;		AN_Score = 0;
 		GN = E;		GN_Score = 0;
 	}
@@ -223,6 +222,44 @@ typedef struct FPDGrades {
 
 }FPD_G;
 
+//Data Area Modulations MOD info and Grade
+typedef struct DataAreaMODInfoTable {
+	unsigned int sum;
+	unsigned int numofgradeE;
+	unsigned int numofgradeD;
+	unsigned int numofgradeC;
+	unsigned int numofgradeB;
+	unsigned int numofgradeA;
+	vector<pair<double, GradeSymbol > > modinfo;
+
+	DataAreaMODInfoTable() {
+		sum = 0;
+		numofgradeE = 0;
+		numofgradeD = 0;
+		numofgradeC = 0;
+		numofgradeB = 0;
+		numofgradeA = 0;
+	}
+
+}MOD_DAMIT;
+
+//15415 Table 7(A) (P19)
+typedef struct ModulationGradingTable {
+	//a
+	unsigned int MOD_codeword_grade_level;
+	unsigned int No_of_codewords_at_level_a;
+	//b
+	unsigned int cumulative_no_of_codewords_at_level_a_or_higher;
+	//sum-b
+	//c
+	unsigned int remaining_codewords;
+	int notional_unused_error_correction_capacity;
+	double notional_UEC;
+	//d
+	unsigned int notional_UEC_grade;
+	//e
+	unsigned int lower_of_a_or_d;
+}MOD_GIT;
 
 
 //-----实现函数-----
@@ -314,8 +351,116 @@ bool __Func_Display_M5(vector<LSAI_SGIT > SGIT, LSAS style) {
 	return true;
 }
 
+//输出T7A表格
+bool __Func_Display_T7A(vector<MOD_GIT > MODGIT) {
+	cout << "MOD.C.G.L" << "\tNo.C.L" << "\tC.No.C" << "\tR.C" << "\tN.U.ECC" << "\tN.UEC" << "\tN.UEC.G" << "\tL.G" << endl;
+	for (unsigned int G = 0; G <= 4; ++G) {
+		cout << MODGIT[G].MOD_codeword_grade_level << "\t" << MODGIT[G].No_of_codewords_at_level_a << "\t" << MODGIT[G].cumulative_no_of_codewords_at_level_a_or_higher 
+			<< "\t" << MODGIT[G].remaining_codewords << "\t" << MODGIT[G].notional_unused_error_correction_capacity
+			<< "\t" << MODGIT[G].notional_UEC << "\t" << MODGIT[G].notional_UEC_grade
+			<< "\t" << MODGIT[G].lower_of_a_or_d << endl;
+	}
+	return true;
+}
+
 #endif
-//转换率
+
+//15415 Table 7(A) (P19) Create & Edit
+GradeSymbol _Func_MOD_T7A(MOD_DAMIT DataAreaMODGradeTable, vector<MOD_GIT > &MODGIT, const unsigned int error_correction_capacity) {
+	if (DataAreaMODGradeTable.modinfo.size() == 0)
+		return GradeSymbol::E;
+
+	//第一列 Init
+	for (unsigned int G = 0; G <= 4; ++G) {
+		MOD_GIT row;
+		row.MOD_codeword_grade_level = (4 - G);
+		MODGIT.push_back(row);
+	}
+
+	//第二列
+	MODGIT[0].No_of_codewords_at_level_a = DataAreaMODGradeTable.numofgradeA;
+	MODGIT[1].No_of_codewords_at_level_a = DataAreaMODGradeTable.numofgradeB;
+	MODGIT[2].No_of_codewords_at_level_a = DataAreaMODGradeTable.numofgradeC;
+	MODGIT[3].No_of_codewords_at_level_a = DataAreaMODGradeTable.numofgradeD;
+	MODGIT[4].No_of_codewords_at_level_a = DataAreaMODGradeTable.numofgradeE;
+
+	//第三、四列
+	MODGIT[0].cumulative_no_of_codewords_at_level_a_or_higher = DataAreaMODGradeTable.numofgradeA;
+	MODGIT[0].remaining_codewords = DataAreaMODGradeTable.sum - MODGIT[0].cumulative_no_of_codewords_at_level_a_or_higher;
+	MODGIT[1].cumulative_no_of_codewords_at_level_a_or_higher = DataAreaMODGradeTable.numofgradeA + DataAreaMODGradeTable.numofgradeB;
+	MODGIT[1].remaining_codewords = DataAreaMODGradeTable.sum - MODGIT[1].cumulative_no_of_codewords_at_level_a_or_higher;
+	MODGIT[2].cumulative_no_of_codewords_at_level_a_or_higher = DataAreaMODGradeTable.numofgradeA + DataAreaMODGradeTable.numofgradeB + DataAreaMODGradeTable.numofgradeC;
+	MODGIT[2].remaining_codewords = DataAreaMODGradeTable.sum - MODGIT[2].cumulative_no_of_codewords_at_level_a_or_higher;
+	MODGIT[3].cumulative_no_of_codewords_at_level_a_or_higher = DataAreaMODGradeTable.numofgradeA + DataAreaMODGradeTable.numofgradeB + DataAreaMODGradeTable.numofgradeC + DataAreaMODGradeTable.numofgradeD;
+	MODGIT[3].remaining_codewords = DataAreaMODGradeTable.sum - MODGIT[3].cumulative_no_of_codewords_at_level_a_or_higher;
+	MODGIT[4].cumulative_no_of_codewords_at_level_a_or_higher = DataAreaMODGradeTable.sum;
+	MODGIT[4].remaining_codewords = 0;
+
+	//第五列
+	MODGIT[0].notional_unused_error_correction_capacity = error_correction_capacity - MODGIT[0].remaining_codewords;
+	MODGIT[1].notional_unused_error_correction_capacity = error_correction_capacity - MODGIT[1].remaining_codewords;
+	MODGIT[2].notional_unused_error_correction_capacity = error_correction_capacity - MODGIT[2].remaining_codewords;
+	MODGIT[3].notional_unused_error_correction_capacity = error_correction_capacity - MODGIT[3].remaining_codewords;
+	MODGIT[4].notional_unused_error_correction_capacity = error_correction_capacity - MODGIT[4].remaining_codewords;
+
+	//第六列
+	MODGIT[0].notional_UEC = MODGIT[0].notional_unused_error_correction_capacity / error_correction_capacity*1.0;
+	MODGIT[1].notional_UEC = MODGIT[1].notional_unused_error_correction_capacity / error_correction_capacity*1.0;
+	MODGIT[2].notional_UEC = MODGIT[2].notional_unused_error_correction_capacity / error_correction_capacity*1.0;
+	MODGIT[3].notional_UEC = MODGIT[3].notional_unused_error_correction_capacity / error_correction_capacity*1.0;
+	MODGIT[4].notional_UEC = MODGIT[4].notional_unused_error_correction_capacity / error_correction_capacity*1.0;
+
+	//第七列
+	for (unsigned int G = 0; G <= 4; ++G) {
+		if (MODGIT[G].notional_unused_error_correction_capacity >= 0) {
+			if (MODGIT[G].notional_UEC < 0.25) {
+				MODGIT[G].notional_UEC_grade = GradeSymbol::E;
+			}
+			else if (MODGIT[G].notional_UEC < 0.37) {
+				MODGIT[G].notional_UEC_grade = GradeSymbol::D;
+			}
+			else if (MODGIT[G].notional_UEC < 0.5) {
+				MODGIT[G].notional_UEC_grade = GradeSymbol::C;
+			}
+			else if (MODGIT[G].notional_UEC < 0.62) {
+				MODGIT[G].notional_UEC_grade = GradeSymbol::B;
+			}
+			else {
+				MODGIT[G].notional_UEC_grade = GradeSymbol::A;
+			}
+		}
+		else {
+			MODGIT[G].notional_UEC_grade = GradeSymbol::E;
+		}
+	}
+
+	//第八列
+	unsigned int max = 0;
+	for (unsigned int G = 0; G <= 4; ++G) {
+		MODGIT[G].lower_of_a_or_d = MODGIT[G].MOD_codeword_grade_level < MODGIT[G].notional_UEC_grade ? MODGIT[G].MOD_codeword_grade_level : MODGIT[G].notional_UEC_grade;
+		if (MODGIT[G].lower_of_a_or_d > max)
+			max = MODGIT[G].lower_of_a_or_d;
+	}
+
+
+	switch (max)
+	{
+	case 4:
+		return GradeSymbol::A;
+	case 3:
+		return GradeSymbol::B;
+	case 2:
+		return GradeSymbol::C;
+	case 1:
+		return GradeSymbol::D;
+	case 0:
+		return GradeSymbol::E;
+	}
+
+	return GradeSymbol::E;
+}
+
+//计算CT转换率
 unsigned int _Func_FPD_TransitionRatioTest(vector<double > SA_T, vector<double > CT_T) {
 	vector<int > SA;
 	for each(auto var in SA_T) {
@@ -1163,36 +1308,69 @@ bool Func_ModuleAvg(unsigned char** img, vector<long > Xmaxima, vector<long > Ym
 	return true;
 }
 
-//求全图最小MOD值
-bool Func_MinModulation(vector<vector<unsigned char > > R, const double GT, const double SC, double &mod, GradeSymbol &grade) {
-	if (R.size() == 0 || SC == 0)
+//求全图数据区MOD值等级
+bool Func_MOD_DataAreaModulation(vector<vector<unsigned char > > R, MOD_DAMIT &DataAreaMODGradeTable, const double GT, const double SC) {
+	if (R.size() < 2 || SC == 0)
 		return false;
-	double min = 1;
-	for (vector<vector<unsigned char > >::iterator p = R.begin() + 1; p != prev(R.end()); ++p) {
-		for (vector<unsigned char >::iterator pp = p->begin() + 1; pp != prev(p->end()); ++pp) {
+	for (vector<vector<unsigned char > >::iterator p = R.begin() + 2; p != R.end() - 2; ++p) {
+		for (vector<unsigned char >::iterator pp = p->begin() + 2; pp != p->end() - 2; ++pp) {
+			++DataAreaMODGradeTable.sum;
 			double temp = 2.00 * (double)abs(*pp - GT) / SC;
-			if (temp <= min) {
-				min = temp;
+			if (temp >= 0.5) {
+				pair<double, GradeSymbol> modulation_info;
+				modulation_info.first = temp;
+				modulation_info.second = GradeSymbol::A;
+				DataAreaMODGradeTable.modinfo.push_back(modulation_info);
+				++DataAreaMODGradeTable.numofgradeA;
+			}
+			else if (temp >= 0.4) {
+				pair<double, GradeSymbol> modulation_info;
+				modulation_info.first = temp;
+				modulation_info.second = GradeSymbol::B;
+				DataAreaMODGradeTable.modinfo.push_back(modulation_info);
+				++DataAreaMODGradeTable.numofgradeB;
+			}
+			else if (temp >= 0.3) {
+				pair<double, GradeSymbol> modulation_info;
+				modulation_info.first = temp;
+				modulation_info.second = GradeSymbol::C;
+				DataAreaMODGradeTable.modinfo.push_back(modulation_info);
+				++DataAreaMODGradeTable.numofgradeC;
+			}
+			else if (temp >= 0.2) {
+				pair<double, GradeSymbol> modulation_info;
+				modulation_info.first = temp;
+				modulation_info.second = GradeSymbol::D;
+				DataAreaMODGradeTable.modinfo.push_back(modulation_info);
+				++DataAreaMODGradeTable.numofgradeD;
+			}
+			else {
+				pair<double, GradeSymbol> modulation_info;
+				modulation_info.first = temp;
+				modulation_info.second = GradeSymbol::E;
+				DataAreaMODGradeTable.modinfo.push_back(modulation_info);
+				++DataAreaMODGradeTable.numofgradeE;
 			}
 		}
+
 	}
 
-	mod = min;
-	if (min >= 0.5) {
-		grade = A;
-	}
-	else if (min >= 0.4) {
-		grade = B;
-	}
-	else if (min >= 0.3) {
-		grade = C;
-	}
-	else if (min >= 0.2) {
-		grade = D;
-	}
-	else {
-		grade = E;
-	}
+	//mod = min;
+	//if (min >= 0.5) {
+	//	grade = A;
+	//}
+	//else if (min >= 0.4) {
+	//	grade = B;
+	//}
+	//else if (min >= 0.3) {
+	//	grade = C;
+	//}
+	//else if (min >= 0.2) {
+	//	grade = D;
+	//}
+	//else {
+	//	grade = E;
+	//}
 
 	return true;
 }
@@ -1646,8 +1824,8 @@ bool Func_FPD(unsigned char** img, FPD_G &FPD_Grades, vector<long > Xmaxima, vec
 	_Func_FPD_TM5_SetLowest_For_LastColumn(L2_seggradingtab, LSAS::L);
 	FPD_Grades.L2_grade = _Func_Fpd_TM5_GetHighest_Of_LastColumn(L2_seggradingtab);
 
-	cout << "L2M5T:" << endl;
-	__Func_Display_M5(L2_seggradingtab, LSAS::L);
+	//cout << "L2M5T:" << endl;
+	//__Func_Display_M5(L2_seggradingtab, LSAS::L);
 
 	//QZL1
 	LSAI_MT QZL1_modinfotab;//M4
@@ -1724,7 +1902,7 @@ bool Func_FPD(unsigned char** img, FPD_G &FPD_Grades, vector<long > Xmaxima, vec
 
 }
 
-//
+//16022 P111 M.1.4 Calculation and grading of average grade(计算L1 L2 QZL1 QZL2 （以及两个Segment区域的最小值）五项的均值再取最小)
 bool Func_CalculatePFDAverageGrade(FPD_G FPD_grades, Grade &grade) {
 	//unsigned int FPD = FPD_grades. < FPD_grades[1] ? FPD_grades[0] : FPD_grades[1];
 	unsigned int CTSA_FPD_1 =
@@ -1761,8 +1939,10 @@ bool Func_CalculatePFDAverageGrade(FPD_G FPD_grades, Grade &grade) {
 }
 
 //-----功能入口-----
-bool Func(CImg* pImg, Grade &grade) {
+bool Func(CImg* pImg, const unsigned int error_correction_capacity, Grade &grade) {
 	if (pImg == NULL)
+		return false;
+	if (error_correction_capacity == 0)
 		return false;
 
 	long width;
@@ -1849,19 +2029,29 @@ bool Func(CImg* pImg, Grade &grade) {
 	rt = Func_CompareHill(aftermx, aftermy, Xmaxima, Ymaxima, width, height);
 	if (rt == false)
 		return false;
+
 #ifdef _DEBUG
 	rt = __Func_DrawLine(source, Xmaxima, Ymaxima, width, height, 0xDD);
 	if (rt == false)
 		return false;
 #endif
+
 	vector<vector<unsigned char > > avr;
 	rt = Func_ModuleAvg(source, Xmaxima, Ymaxima, avr, width, height);
 	if (rt == false)
 		return false;
 
-	rt = Func_MinModulation(avr, GT, grade.SC_Score, grade.MOD_Score, grade.MOD);
+	MOD_DAMIT DataAreaMODInfo;
+	rt = Func_MOD_DataAreaModulation(avr, DataAreaMODInfo, GT, grade.SC_Score);
 	if (rt == false)
 		return false;
+
+	vector<MOD_GIT> MODGradingTable;
+	grade.MOD = _Func_MOD_T7A(DataAreaMODInfo, MODGradingTable, error_correction_capacity);
+
+#ifdef _DEBUG
+	__Func_Display_T7A(MODGradingTable);
+#endif
 
 	rt = Func_AN(Xmaxima, Ymaxima, grade.AN_Score, grade.AN);
 	if (rt == false)
@@ -1922,17 +2112,17 @@ bool Func(CImg* pImg, Grade &grade) {
 int main() {
 	CImg* pImg = create_image();
 	//BOOL rt = pImg->AttachFromFile("..//imgs//2-1-0.bmp");
-	BOOL rt = pImg->AttachFromFile("..//imgs//code-test-3.bmp");
+	BOOL rt = pImg->AttachFromFile("..//imgs//code-test-1.bmp");
 	if (!rt)
 		return -1;
 	Grade Gr;
 
 	bool rt1 = true;
-	rt1 = Func(pImg, Gr);
+	rt1 = Func(pImg, 3, Gr);
 
 	if (rt1) {
 		cout << "\nSC_Score = " << Gr.SC_Score << "\tSC_Grade = " << Gr.SC << endl;
-		cout << "MOD_Score = " << Gr.MOD_Score << "\tMOD_Grade = " << Gr.MOD << endl;
+		cout << "MOD_Grade = " << Gr.MOD << endl;
 		cout << "AN_Score = " << Gr.AN_Score << "\tAN_Grade = " << Gr.AN << endl;
 		cout << "GN_Score = " << Gr.GN_Score << "\tGN_Grade = " << Gr.GN << endl;
 		cout << "FPD = " << Gr.FPD << endl;
