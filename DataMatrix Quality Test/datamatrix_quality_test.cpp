@@ -34,7 +34,8 @@ typedef enum GradeSymbol {
 typedef enum LShapeAreaStyle {
 	L = 0,
 	QZL = 1,
-	CTSA = 2
+	CT = 2,
+	SA = 3
 }LSAS;
 
 //-----结构-----
@@ -49,6 +50,7 @@ typedef struct Grade {
 	double AN_Score;
 	GradeSymbol GN;
 	double GN_Score;
+	GradeSymbol FPD;
 
 	Grade() {
 		SC = E;		SC_Score = 0;
@@ -190,7 +192,41 @@ typedef struct LShapeAreaInfoSegmentGradingTable {
 
 }LSAI_SGIT;
 
+//CTSA Segment Grade
+typedef struct CTSASegmentGrade {
+	unsigned int transition_ratio_test_grade;
+	unsigned int notional_damage_test_grades;
+	CTSASegmentGrade() {
+		transition_ratio_test_grade = 0;
+		notional_damage_test_grades = 0;
+	}
+}FPD_CTSASG;
+
+//All FPD Grades
+typedef struct FPDGrades {
+	unsigned int L1_grade;
+	unsigned int L2_grade;
+	unsigned int QZL1_grade;
+	unsigned int QZL2_grade;
+	vector<FPD_CTSASG > CTSA_segs_grades;
+	FPDGrades() {
+		L1_grade = 0;
+		L2_grade = 0;
+		QZL1_grade = 0;
+		QZL2_grade = 0;
+
+		FPD_CTSASG CTSA1;
+		FPD_CTSASG CTSA2;
+		CTSA_segs_grades.push_back(CTSA1);
+		CTSA_segs_grades.push_back(CTSA2);
+	}
+
+}FPD_G;
+
+
+
 //-----实现函数-----
+#ifdef _DEBUG
 
 //获取当前的系统时间以创建文件名（仅供调试输出使用）
 string NowTimeToFileName(const string preStr, const string suffixalNameStr) {
@@ -255,11 +291,86 @@ bool __Func_DrawLine(unsigned char** img, vector<long > Xmaxima, vector<long > Y
 	return true;
 }
 
-//
-bool _Func_FPD_TransitionRatioTest(LSAI_MT MT, vector<LSAI_SGIT > &SGIT) {
+//输出M5表格
+bool __Func_Display_M5(vector<LSAI_SGIT > SGIT, LSAS style) {
+	if (style == LSAS::L || style == LSAS::QZL) {
+		cout << "MOD.G.L" << "\tNo.M" << "\tC.No.M" << "\tR.D.M" << "\tD.M" << "\tN.D.G" << "\tL.G" << endl;
+		for (unsigned int G = 0; G <= 4; ++G) {
+			cout << SGIT[G].MOD_grade_level << "\t" << SGIT[G].no_of_modules << "\t" << SGIT[G].cum_no_of_modules
+				<< "\t" << SGIT[G].remainder_damaged_modules << "\t" << SGIT[G].ST.LQZLT.damaged_modules
+				<< "\t" << SGIT[G].ST.LQZLT.notional_damage_grade << "\t" << SGIT[G].lower_of_grades << endl;
+		}
+	}
+	else if (style == LSAS::CT || style == LSAS::SA) {
+		cout << "MOD.G.L" << "\tNo.M" << "\tC.No.M" << "\tR.D.M" << "\tCT.R.M" << "\tCT.R.G" << "\tCT.D.M" << "\tCT.D.G" << "\tSA.D.M" << "\tSA.D.G" << "\tL.G" << endl;
+		for (unsigned int G = 0; G <= 4; ++G) {
+			cout << SGIT[G].MOD_grade_level << "\t" << SGIT[G].no_of_modules << "\t" << SGIT[G].cum_no_of_modules << "\t" << SGIT[G].remainder_damaged_modules
+				<< "\t" << /*SGIT[G].ST.CTSAT.CT_regularity_modules*/"-" << "\t" << SGIT[G].ST.CTSAT.CT_regularity_grade
+				<< "\t" << SGIT[G].ST.CTSAT.CT_damaged_modules << "\t" << SGIT[G].ST.CTSAT.CT_damage_grade
+				<< "\t" << SGIT[G].ST.CTSAT.SA_damaged_modules << "\t" << SGIT[G].ST.CTSAT.SA_damage_grade
+				<< "\t" << SGIT[G].lower_of_grades << endl;
+		}
+	}
+	return true;
+}
 
+#endif
+//转换率
+unsigned int _Func_FPD_TransitionRatioTest(vector<double > SA_T, vector<double > CT_T) {
+	vector<int > SA;
+	for each(auto var in SA_T) {
+		if (var >= 0)
+			SA.push_back(1);
+		else
+			SA.push_back(0);
+	}
 
+	vector<int > CT;
+	for each(auto var in CT_T) {
+		if (var >= 0)
+			CT.push_back(1);
+		else
+			CT.push_back(0);
+	}
 
+	unsigned int Ts = 0;
+	for (vector<int >::iterator p = SA.begin() + 1; p != SA.end(); ++p) {
+		unsigned int increment = abs(*p - *(p - 1));
+		Ts += increment;
+	}
+
+	unsigned int Tc = 0;
+	for (vector<int >::iterator p = CT.begin() + 1; p != CT.end(); ++p) {
+		unsigned int increment = abs(*p - *(p - 1));
+		Tc += increment;
+	}
+
+	unsigned int Ts_ = Ts == 0 ? 0 : (Ts - 1);
+
+	double TR = 1;
+	if (Tc != 0)
+		TR = Ts_ * 1.0 / Tc * 1.0;
+	else
+		return 0;
+
+	unsigned int grade = 0;
+	if (TR < 0.06) {
+		grade = 4;
+	}
+	else if (TR < 0.08) {
+		grade = 3;
+	}
+	else if (TR < 0.10) {
+		grade = 2;
+	}
+	else if (TR < 0.12) {
+		grade = 1;
+	}
+	else {
+		grade = 0;
+	}
+
+	return grade;
 }
 
 //滑动大小为5的窗口判断module error //16022 P109 e
@@ -314,10 +425,10 @@ bool _Func_FPD_CTRegularityTest(LSAI_MT MT, vector<LSAI_SGIT > &SGIT) {
 bool _Func_FPD_CTDamageTest(LSAI_MT MT, vector<LSAI_SGIT > &SGIT) {
 	if (MT.modinfo.size() == 0 || SGIT.size() == 0)
 		return false;
-	SGIT[0].ST.CTSAT.CT_damaged_modules = (MT.numofgradeB + MT.numofgradeC + MT.numofgradeD + MT.numofgradeE) / MT.sum;
-	SGIT[1].ST.CTSAT.CT_damaged_modules = (MT.numofgradeC + MT.numofgradeD + MT.numofgradeE) / MT.sum;
-	SGIT[2].ST.CTSAT.CT_damaged_modules = (MT.numofgradeD + MT.numofgradeE) / MT.sum;
-	SGIT[3].ST.CTSAT.CT_damaged_modules = MT.numofgradeE / MT.sum;
+	SGIT[0].ST.CTSAT.CT_damaged_modules = (double)(MT.numofgradeB + MT.numofgradeC + MT.numofgradeD + MT.numofgradeE) / MT.sum * 1.0;
+	SGIT[1].ST.CTSAT.CT_damaged_modules = (double)(MT.numofgradeC + MT.numofgradeD + MT.numofgradeE) / MT.sum * 1.0;
+	SGIT[2].ST.CTSAT.CT_damaged_modules = (double)(MT.numofgradeD + MT.numofgradeE) / MT.sum * 1.0;
+	SGIT[3].ST.CTSAT.CT_damaged_modules = (double)MT.numofgradeE / MT.sum * 1.0;
 	SGIT[4].ST.CTSAT.CT_damaged_modules = 0;
 
 	for (unsigned int G = 0; G <= 4; ++G) {
@@ -344,27 +455,27 @@ bool _Func_FPD_CTDamageTest(LSAI_MT MT, vector<LSAI_SGIT > &SGIT) {
 bool _Func_FPD_SAFixedPatternTest(LSAI_MT MT, vector<LSAI_SGIT > &SGIT) {
 	if (MT.modinfo.size() == 0 || SGIT.size() == 0)
 		return false;
-	SGIT[0].ST.CTSAT.CT_damaged_modules = (MT.numofgradeB + MT.numofgradeC + MT.numofgradeD + MT.numofgradeE) / MT.sum;
-	SGIT[1].ST.CTSAT.CT_damaged_modules = (MT.numofgradeC + MT.numofgradeD + MT.numofgradeE) / MT.sum;
-	SGIT[2].ST.CTSAT.CT_damaged_modules = (MT.numofgradeD + MT.numofgradeE) / MT.sum;
-	SGIT[3].ST.CTSAT.CT_damaged_modules = MT.numofgradeE / MT.sum;
-	SGIT[4].ST.CTSAT.CT_damaged_modules = 0;
+	SGIT[0].ST.CTSAT.SA_damaged_modules = (double)(MT.numofgradeB + MT.numofgradeC + MT.numofgradeD + MT.numofgradeE) / MT.sum * 1.0;
+	SGIT[1].ST.CTSAT.SA_damaged_modules = (double)(MT.numofgradeC + MT.numofgradeD + MT.numofgradeE) / MT.sum * 1.0;
+	SGIT[2].ST.CTSAT.SA_damaged_modules = (double)(MT.numofgradeD + MT.numofgradeE) / MT.sum * 1.0;
+	SGIT[3].ST.CTSAT.SA_damaged_modules = (double)MT.numofgradeE / MT.sum * 1.0;
+	SGIT[4].ST.CTSAT.SA_damaged_modules = 0;
 
 	for (unsigned int G = 0; G <= 4; ++G) {
-		if (SGIT[G].ST.CTSAT.CT_damaged_modules < 0.1) {
-			SGIT[G].ST.CTSAT.CT_damage_grade = GradeSymbol::A;
+		if (SGIT[G].ST.CTSAT.SA_damaged_modules < 0.1) {
+			SGIT[G].ST.CTSAT.SA_damage_grade = GradeSymbol::A;
 		}
-		else if (SGIT[G].ST.CTSAT.CT_damaged_modules < 0.15) {
-			SGIT[G].ST.CTSAT.CT_damage_grade = GradeSymbol::B;
+		else if (SGIT[G].ST.CTSAT.SA_damaged_modules < 0.15) {
+			SGIT[G].ST.CTSAT.SA_damage_grade = GradeSymbol::B;
 		}
-		else if (SGIT[G].ST.CTSAT.CT_damaged_modules < 0.20) {
-			SGIT[G].ST.CTSAT.CT_damage_grade = GradeSymbol::C;
+		else if (SGIT[G].ST.CTSAT.SA_damaged_modules < 0.20) {
+			SGIT[G].ST.CTSAT.SA_damage_grade = GradeSymbol::C;
 		}
-		else if (SGIT[G].ST.CTSAT.CT_damaged_modules < 0.25) {
-			SGIT[G].ST.CTSAT.CT_damage_grade = GradeSymbol::D;
+		else if (SGIT[G].ST.CTSAT.SA_damaged_modules < 0.25) {
+			SGIT[G].ST.CTSAT.SA_damage_grade = GradeSymbol::D;
 		}
 		else {
-			SGIT[G].ST.CTSAT.CT_damage_grade = GradeSymbol::E;
+			SGIT[G].ST.CTSAT.SA_damaged_modules = GradeSymbol::E;
 		}
 	}
 	return true;
@@ -414,7 +525,7 @@ bool _Func_FPD_TM4(vector<double > info, LSAI_MT &MT, LSAS style) {
 		}
 		return true;
 	}
-	if (style == LSAS::QZL) {
+	else if (style == LSAS::QZL || style == LSAS::SA) {
 		for each(double mod in info) {
 			++MT.sum;
 			if (mod >= 0.5) {
@@ -455,6 +566,48 @@ bool _Func_FPD_TM4(vector<double > info, LSAI_MT &MT, LSAS style) {
 		}
 		return true;
 	}
+	else if (style == LSAS::CT) {
+		for each(double mod in info) {
+			++MT.sum;
+			mod = abs(mod);
+			if (mod >= 0.5) {
+				++MT.numofgradeA;
+				pair<double, GradeSymbol> ipa;
+				ipa.first = -mod;
+				ipa.second = GradeSymbol::A;
+				MT.modinfo.push_back(ipa);
+			}
+			else if (mod >= 0.4) {
+				++MT.numofgradeB;
+				pair<double, GradeSymbol> ipa;
+				ipa.first = -mod;
+				ipa.second = GradeSymbol::B;
+				MT.modinfo.push_back(ipa);
+			}
+			else if (mod >= 0.3) {
+				++MT.numofgradeC;
+				pair<double, GradeSymbol> ipa;
+				ipa.first = -mod;
+				ipa.second = GradeSymbol::C;
+				MT.modinfo.push_back(ipa);
+			}
+			else if (mod >= 0.2) {
+				++MT.numofgradeD;
+				pair<double, GradeSymbol> ipa;
+				ipa.first = -mod;
+				ipa.second = GradeSymbol::D;
+				MT.modinfo.push_back(ipa);
+			}
+			else {
+				++MT.numofgradeE;
+				pair<double, GradeSymbol> ipa;
+				ipa.first = -mod;
+				ipa.second = GradeSymbol::E;
+				MT.modinfo.push_back(ipa);
+			}
+		}
+		return true;
+	}
 	return false;
 }
 
@@ -471,7 +624,7 @@ bool _Func_FPD_TM5_Init(vector<LSAI_SGIT > &SGIT) {
 	return true;
 }
 
-//16022 Table M.5 Create
+//16022 Table M.5 Edit
 bool _Func_FPD_TM5_Edit(LSAI_MT info, vector<LSAI_SGIT > &SGIT, LSAS style) {
 	//当区域为L或者QZL时，子表格有1项2列
 	if (style == LSAS::L || style == LSAS::QZL) {
@@ -479,35 +632,35 @@ bool _Func_FPD_TM5_Edit(LSAI_MT info, vector<LSAI_SGIT > &SGIT, LSAS style) {
 		SGIT[0].no_of_modules = info.numofgradeA;
 		SGIT[0].cum_no_of_modules = info.numofgradeA;
 		SGIT[0].remainder_damaged_modules = info.sum - SGIT[0].cum_no_of_modules;
-		SGIT[0].ST.LQZLT.damaged_modules = SGIT[0].remainder_damaged_modules / info.sum;
+		SGIT[0].ST.LQZLT.damaged_modules = SGIT[0].remainder_damaged_modules * 1.0 / info.sum*1.0;
 
 		//3
 		SGIT[1].no_of_modules = info.numofgradeB;
 		SGIT[1].cum_no_of_modules = info.numofgradeA + info.numofgradeB;
 		SGIT[1].remainder_damaged_modules = info.sum - SGIT[1].cum_no_of_modules;
-		SGIT[1].ST.LQZLT.damaged_modules = SGIT[1].remainder_damaged_modules / info.sum;
+		SGIT[1].ST.LQZLT.damaged_modules = SGIT[1].remainder_damaged_modules * 1.0 / info.sum*1.0;
 
 		//2
 		SGIT[2].no_of_modules = info.numofgradeC;
 		SGIT[2].cum_no_of_modules = info.numofgradeA + info.numofgradeB + info.numofgradeC;
 		SGIT[2].remainder_damaged_modules = info.sum - SGIT[2].cum_no_of_modules;
-		SGIT[2].ST.LQZLT.damaged_modules = SGIT[2].remainder_damaged_modules / info.sum;
+		SGIT[2].ST.LQZLT.damaged_modules = SGIT[2].remainder_damaged_modules * 1.0 / info.sum*1.0;
 
 		//1
 		SGIT[3].no_of_modules = info.numofgradeD;
 		SGIT[3].cum_no_of_modules = info.numofgradeA + info.numofgradeB + info.numofgradeC + info.numofgradeD;
 		SGIT[3].remainder_damaged_modules = info.sum - SGIT[3].cum_no_of_modules;
-		SGIT[3].ST.LQZLT.damaged_modules = SGIT[3].remainder_damaged_modules / info.sum;
+		SGIT[3].ST.LQZLT.damaged_modules = SGIT[3].remainder_damaged_modules * 1.0 / info.sum*1.0;
 
 		//0
 		SGIT[4].no_of_modules = info.numofgradeE;
 		SGIT[4].cum_no_of_modules = info.sum;
 		SGIT[4].remainder_damaged_modules = 0;
-		SGIT[4].ST.LQZLT.damaged_modules = SGIT[4].remainder_damaged_modules / info.sum;
+		SGIT[4].ST.LQZLT.damaged_modules = SGIT[4].remainder_damaged_modules * 1.0 / info.sum*1.0;
 
 		//按照M.1表获得等级，并填到表格第6列
 		for (unsigned int G = 0; G <= 4; ++G) {
-			if (SGIT[G].ST.LQZLT.damaged_modules = 0) {
+			if (SGIT[G].ST.LQZLT.damaged_modules == 0) {
 				SGIT[G].ST.LQZLT.notional_damage_grade = GradeSymbol::A;
 			}
 			else if (SGIT[G].ST.LQZLT.damaged_modules <= 0.09) {
@@ -524,13 +677,13 @@ bool _Func_FPD_TM5_Edit(LSAI_MT info, vector<LSAI_SGIT > &SGIT, LSAS style) {
 			}
 
 			//将等级较小值填到表格第7列
-			SGIT[G].lower_of_grades = SGIT[G].ST.LQZLT.notional_damage_grade < SGIT[G].MOD_grade_level ? SGIT[G].ST.LQZLT.notional_damage_grade : SGIT[G].MOD_grade_level;
+			//SGIT[G].lower_of_grades = SGIT[G].ST.LQZLT.notional_damage_grade < SGIT[G].MOD_grade_level ? SGIT[G].ST.LQZLT.notional_damage_grade : SGIT[G].MOD_grade_level;
 		}
 
 		return true;
 	}
 	//当区域为CT或者SA时，子表格有3项6列
-	else if (style == LSAS::CTSA) {
+	else if (style == LSAS::CT || style == LSAS::SA) {
 		//4 填写第2列到第4列的数据
 		SGIT[0].no_of_modules = info.numofgradeA;
 		SGIT[0].cum_no_of_modules = info.numofgradeA;
@@ -556,13 +709,48 @@ bool _Func_FPD_TM5_Edit(LSAI_MT info, vector<LSAI_SGIT > &SGIT, LSAS style) {
 		SGIT[4].cum_no_of_modules = info.sum;
 		SGIT[4].remainder_damaged_modules = 0;
 
-		//填写子表格的数据
-
-
 
 		return true;
 	}
 	return false;
+}
+
+//16022 Table M.5 Set Last Column
+bool _Func_FPD_TM5_SetLowest_For_LastColumn(vector<LSAI_SGIT > &SGIT, LSAS style) {
+	if (style == LSAS::L || style == LSAS::QZL) {
+		for (unsigned int G = 0; G <= 4; ++G) {
+			SGIT[G].lower_of_grades = SGIT[G].ST.LQZLT.notional_damage_grade < SGIT[G].MOD_grade_level ? SGIT[G].ST.LQZLT.notional_damage_grade : SGIT[G].MOD_grade_level;
+		}
+		return true;
+	}
+	else if (style == LSAS::CT || style == LSAS::SA) {
+		for (unsigned int G = 0; G <= 4; ++G) {
+			unsigned int MIN_Grade = 4;
+			if (SGIT[G].MOD_grade_level <= MIN_Grade)
+				MIN_Grade = SGIT[G].MOD_grade_level;
+			if (SGIT[G].ST.CTSAT.CT_regularity_grade <= MIN_Grade)
+				MIN_Grade = SGIT[G].ST.CTSAT.CT_regularity_grade;
+			if (SGIT[G].ST.CTSAT.CT_damage_grade <= MIN_Grade)
+				MIN_Grade = SGIT[G].ST.CTSAT.CT_damage_grade;
+			if (SGIT[G].ST.CTSAT.SA_damage_grade <= MIN_Grade)
+				MIN_Grade = SGIT[G].ST.CTSAT.SA_damage_grade;
+
+			SGIT[G].lower_of_grades = MIN_Grade;
+		}
+
+		return true;
+	}
+	return false;
+}
+
+//16022 Table M.5 Set Last Row ( Highest of Last Column )
+unsigned int _Func_Fpd_TM5_GetHighest_Of_LastColumn(vector<LSAI_SGIT > SGIT) {
+	unsigned int max = 0;
+	for (unsigned int G = 0; G <= 4; ++G) {
+		if (SGIT[G].lower_of_grades >= max)
+			max = SGIT[G].lower_of_grades;
+	}
+	return max;
 }
 
 //计算SC值
@@ -1086,8 +1274,8 @@ bool Func_GN(vector<long > Xmaxima, vector<long > Ymaxima, double &score, GradeS
 	return true;
 }
 
-//L形区域以及反L形区域的各单元像素均值与MOD值计算
-bool Func_FPD(unsigned char** img, vector<long > Xmaxima, vector<long > Ymaxima, const double SC, const double GT, const long width, const long height) {
+//L形区域以及反L形区域的各单元像素均值与MOD值计算与FPD各项分值计算
+bool Func_FPD(unsigned char** img, FPD_G &FPD_Grades, vector<long > Xmaxima, vector<long > Ymaxima, const double SC, const double GT, const long width, const long height) {
 	if (img == NULL || Xmaxima.size() < 2 || Ymaxima.size() < 2)
 		return false;
 	LSAI info;
@@ -1171,18 +1359,18 @@ bool Func_FPD(unsigned char** img, vector<long > Xmaxima, vector<long > Ymaxima,
 			info.L1AVG.push_back(mod);
 		}
 	}
-	sum = 0;
-	count = 0;
-	for (long y = *prev(Xmaxima.end()) + 1; y < *prev(Xmaxima.end()) + info.downdistance; ++y) {
-		for (long x = Ymaxima[0] + 1; x < Ymaxima[1]; ++x) {
-			sum += img[y][x];
-			++count;
-		}
-	}
-	if (count != 0) {
-		mod = sum / count;
-		info.L1AVG.push_back(mod);
-	}
+	//sum = 0;
+	//count = 0;
+	//for (long y = *prev(Xmaxima.end()) + 1; y < *prev(Xmaxima.end()) + info.downdistance; ++y) {
+	//	for (long x = Ymaxima[0] + 1; x < Ymaxima[1]; ++x) {
+	//		sum += img[y][x];
+	//		++count;
+	//	}
+	//}
+	//if (count != 0) {
+	//	mod = sum / count;
+	//	info.L1AVG.push_back(mod);
+	//}
 
 	//QZL2
 	xpre = Ymaxima[0] - info.leftdistance + 1;
@@ -1215,8 +1403,10 @@ bool Func_FPD(unsigned char** img, vector<long > Xmaxima, vector<long > Ymaxima,
 	}
 
 	//L2
-	xpre = Ymaxima[0] - info.leftdistance + 1;
+	xpre = Ymaxima[0]/* - info.leftdistance*/ + 1;
 	for each(long xthr in Ymaxima) {
+		if (xthr == Ymaxima[0])//
+			continue;//
 		sum = 0;
 		count = 0;
 		for (long y = *(Xmaxima.end() - 2) + 1; y < *(Xmaxima.end() - 1); ++y) {
@@ -1342,7 +1532,7 @@ bool Func_FPD(unsigned char** img, vector<long > Xmaxima, vector<long > Ymaxima,
 		info.CT2MOD.push_back(mod);
 	}
 
-	{
+	/*{
 		cout << "L1AVG:\t";
 		for each(double var in info.L1AVG) {
 			cout << var << " ";
@@ -1427,16 +1617,147 @@ bool Func_FPD(unsigned char** img, vector<long > Xmaxima, vector<long > Ymaxima,
 		}
 		cout << endl;
 		cout.precision(6);
-	}
+	}*/
 
+	//FPD_G FPD_Grades;
 
 	//L1
 	LSAI_MT L1_modinfotab;//M4
 	_Func_FPD_TM4(info.L1MOD, L1_modinfotab, LSAS::L);
+
 	vector<LSAI_SGIT > L1_seggradingtab;//M5
 	_Func_FPD_TM5_Init(L1_seggradingtab);
+	_Func_FPD_TM5_Edit(L1_modinfotab, L1_seggradingtab, LSAS::L);
+
+	_Func_FPD_TM5_SetLowest_For_LastColumn(L1_seggradingtab, LSAS::L);
+	FPD_Grades.L1_grade = _Func_Fpd_TM5_GetHighest_Of_LastColumn(L1_seggradingtab);
+
+	//cout << "L1M5T:" << endl;
+	//__Func_Display_M5(L1_seggradingtab, LSAS::L);
+
+	//L2
+	LSAI_MT L2_modinfotab;//M4
+	_Func_FPD_TM4(info.L2MOD, L2_modinfotab, LSAS::L);
+
+	vector<LSAI_SGIT > L2_seggradingtab;//M5
+	_Func_FPD_TM5_Init(L2_seggradingtab);
+	_Func_FPD_TM5_Edit(L2_modinfotab, L2_seggradingtab, LSAS::L);
+
+	_Func_FPD_TM5_SetLowest_For_LastColumn(L2_seggradingtab, LSAS::L);
+	FPD_Grades.L2_grade = _Func_Fpd_TM5_GetHighest_Of_LastColumn(L2_seggradingtab);
+
+	cout << "L2M5T:" << endl;
+	__Func_Display_M5(L2_seggradingtab, LSAS::L);
+
+	//QZL1
+	LSAI_MT QZL1_modinfotab;//M4
+	_Func_FPD_TM4(info.QZL1MOD, QZL1_modinfotab, LSAS::QZL);
+
+	vector<LSAI_SGIT > QZL1_seggradingtab;//M5
+	_Func_FPD_TM5_Init(QZL1_seggradingtab);
+	_Func_FPD_TM5_Edit(QZL1_modinfotab, QZL1_seggradingtab, LSAS::QZL);
+
+	_Func_FPD_TM5_SetLowest_For_LastColumn(QZL1_seggradingtab, LSAS::QZL);
+	FPD_Grades.QZL1_grade = _Func_Fpd_TM5_GetHighest_Of_LastColumn(QZL1_seggradingtab);
+
+	/*cout << "QZL1M5T:" << endl;
+	__Func_Display_M5(QZL1_seggradingtab, LSAS::QZL);*/
+
+	//QZL2
+	LSAI_MT QZL2_modinfotab;//M4
+	_Func_FPD_TM4(info.QZL2MOD, QZL2_modinfotab, LSAS::QZL);
+
+	vector<LSAI_SGIT > QZL2_seggradingtab;//M5
+	_Func_FPD_TM5_Init(QZL2_seggradingtab);
+	_Func_FPD_TM5_Edit(QZL2_modinfotab, QZL2_seggradingtab, LSAS::QZL);
+
+	_Func_FPD_TM5_SetLowest_For_LastColumn(QZL2_seggradingtab, LSAS::QZL);
+	FPD_Grades.QZL2_grade = _Func_Fpd_TM5_GetHighest_Of_LastColumn(QZL2_seggradingtab);
+
+	//cout << "QZL2M5T:" << endl;
+	//__Func_Display_M5(QZL2_seggradingtab, LSAS::QZL);
+
+	//CTSA1
+	LSAI_MT CTSA1_modinfotab;//M4
+	_Func_FPD_TM4(info.CT1MOD, CTSA1_modinfotab, LSAS::CT);
+	_Func_FPD_TM4(info.SA1MOD, CTSA1_modinfotab, LSAS::SA);
+
+	vector<LSAI_SGIT > CTSA1_seggradingtab;//M5
+	_Func_FPD_TM5_Init(CTSA1_seggradingtab);
+	_Func_FPD_TM5_Edit(CTSA1_modinfotab, CTSA1_seggradingtab, LSAS::CT);
+
+	LSAI_MT CT1_modinfotab;
+	_Func_FPD_TM4(info.CT1MOD, CT1_modinfotab, LSAS::CT);
+	LSAI_MT SA1_modinfotab;
+	_Func_FPD_TM4(info.SA1MOD, SA1_modinfotab, LSAS::CT);
+
+	_Func_FPD_CTRegularityTest(CT1_modinfotab, CTSA1_seggradingtab);
+	_Func_FPD_CTDamageTest(CT1_modinfotab, CTSA1_seggradingtab);
+	_Func_FPD_SAFixedPatternTest(SA1_modinfotab, CTSA1_seggradingtab);
+
+	_Func_FPD_TM5_SetLowest_For_LastColumn(CTSA1_seggradingtab, LSAS::CT);
+	FPD_Grades.CTSA_segs_grades.begin()->notional_damage_test_grades = _Func_Fpd_TM5_GetHighest_Of_LastColumn(CTSA1_seggradingtab);
+	FPD_Grades.CTSA_segs_grades.begin()->transition_ratio_test_grade = _Func_FPD_TransitionRatioTest(info.SA1MOD, info.CT1MOD);
 
 
+	//CTSA2
+	LSAI_MT CTSA2_modinfotab;//M4
+	_Func_FPD_TM4(info.CT2MOD, CTSA2_modinfotab, LSAS::CT);
+	_Func_FPD_TM4(info.SA2MOD, CTSA2_modinfotab, LSAS::SA);
+
+	vector<LSAI_SGIT > CTSA2_seggradingtab;//M5
+	_Func_FPD_TM5_Init(CTSA2_seggradingtab);
+	_Func_FPD_TM5_Edit(CTSA2_modinfotab, CTSA2_seggradingtab, LSAS::CT);
+
+	LSAI_MT CT2_modinfotab;
+	_Func_FPD_TM4(info.CT2MOD, CT2_modinfotab, LSAS::CT);
+	LSAI_MT SA2_modinfotab;
+	_Func_FPD_TM4(info.SA2MOD, SA2_modinfotab, LSAS::CT);
+
+	_Func_FPD_CTRegularityTest(CT2_modinfotab, CTSA2_seggradingtab);
+	_Func_FPD_CTDamageTest(CT2_modinfotab, CTSA2_seggradingtab);
+	_Func_FPD_SAFixedPatternTest(SA2_modinfotab, CTSA2_seggradingtab);
+
+	_Func_FPD_TM5_SetLowest_For_LastColumn(CTSA2_seggradingtab, LSAS::CT);
+	(FPD_Grades.CTSA_segs_grades.begin() + 1)->notional_damage_test_grades = _Func_Fpd_TM5_GetHighest_Of_LastColumn(CTSA1_seggradingtab);
+	(FPD_Grades.CTSA_segs_grades.begin() + 1)->transition_ratio_test_grade = _Func_FPD_TransitionRatioTest(info.SA2MOD, info.CT2MOD);
+
+}
+
+//
+bool Func_CalculatePFDAverageGrade(FPD_G FPD_grades, Grade &grade) {
+	//unsigned int FPD = FPD_grades. < FPD_grades[1] ? FPD_grades[0] : FPD_grades[1];
+	unsigned int CTSA_FPD_1 =
+		FPD_grades.CTSA_segs_grades[0].notional_damage_test_grades < FPD_grades.CTSA_segs_grades[0].transition_ratio_test_grade ?
+		FPD_grades.CTSA_segs_grades[0].notional_damage_test_grades : FPD_grades.CTSA_segs_grades[0].transition_ratio_test_grade;
+	unsigned int CTSA_FPD_2 =
+		FPD_grades.CTSA_segs_grades[1].notional_damage_test_grades < FPD_grades.CTSA_segs_grades[1].transition_ratio_test_grade ?
+		FPD_grades.CTSA_segs_grades[1].notional_damage_test_grades : FPD_grades.CTSA_segs_grades[1].transition_ratio_test_grade;
+	unsigned int FPD = CTSA_FPD_1 < CTSA_FPD_2 ? CTSA_FPD_1 : CTSA_FPD_2;
+	double AG = (FPD_grades.L1_grade + FPD_grades.L2_grade + FPD_grades.QZL1_grade + FPD_grades.QZL2_grade + FPD)*1.0 / 5.0;
+	double min = AG;
+	if (FPD_grades.L1_grade < min)
+		min = FPD_grades.L1_grade;
+	if (FPD_grades.L2_grade < min)
+		min = FPD_grades.L2_grade;
+	if (FPD_grades.QZL1_grade < min)
+		min = FPD_grades.QZL1_grade;
+	if (FPD_grades.QZL2_grade < min)
+		min = FPD_grades.QZL2_grade;
+	if (FPD < min)
+		min = FPD;
+	if ((unsigned int)min == 4)
+		grade.FPD = GradeSymbol::A;
+	else if ((unsigned int)min == 3)
+		grade.FPD = GradeSymbol::B;
+	else if ((unsigned int)min == 2)
+		grade.FPD = GradeSymbol::C;
+	else if ((unsigned int)min == 1)
+		grade.FPD = GradeSymbol::D;
+	else
+		grade.FPD = GradeSymbol::E;
+
+	return true;
 }
 
 //-----功能入口-----
@@ -1502,22 +1823,23 @@ bool Func(CImg* pImg, Grade &grade) {
 	rt = Func_SC(source, width, height, grade.SC_Score, GT, grade.SC);
 	if (rt == false)
 		return false;
-	//cout << SC << endl;
+
 	rt = Func_Sobel(source, gx, gy, width, height);
 	if (rt == false)
 		return false;
+
 	rt = Func_Gradient(gx, gy, gradient, width, height);
 	if (rt == false)
 		return false;
+
 	rt = Func_Mapping(gradient, mappedx, mappedy, width, height);
 	if (rt == false)
 		return false;
+
 	const int model[7] = { 5,10,45,50,45,10,5 };
 	const int M = 100;
 	rt = Func_Gauss(mappedx, mappedy, aftermx, aftermy, width, height, model, M);
-	//const int model2[7] = { 0,0,10,20,10,0,0 };
-	//const int M2 = 100;
-	//rt = Func_Gauss(aftermx, aftermy, remx, remy, width, height, model2, M2);
+
 	if (rt == false)
 		return false;
 	vector<long > Xmaxima, Ymaxima;
@@ -1527,19 +1849,15 @@ bool Func(CImg* pImg, Grade &grade) {
 	rt = Func_CompareHill(aftermx, aftermy, Xmaxima, Ymaxima, width, height);
 	if (rt == false)
 		return false;
+#ifdef _DEBUG
 	rt = __Func_DrawLine(source, Xmaxima, Ymaxima, width, height, 0xDD);
 	if (rt == false)
 		return false;
+#endif
 	vector<vector<unsigned char > > avr;
 	rt = Func_ModuleAvg(source, Xmaxima, Ymaxima, avr, width, height);
 	if (rt == false)
 		return false;
-	//for (vector<vector<unsigned char > >::iterator p = avr.begin(); p != avr.end(); ++p) {
-	//	for (vector<unsigned char >::iterator pp = p->begin(); pp != p->end(); ++pp) {
-	//		cout << (unsigned int)*pp << " ";
-	//	}
-	//	cout << endl;
-	//}
 
 	rt = Func_MinModulation(avr, GT, grade.SC_Score, grade.MOD_Score, grade.MOD);
 	if (rt == false)
@@ -1553,11 +1871,13 @@ bool Func(CImg* pImg, Grade &grade) {
 	if (rt == false)
 		return false;
 
-	//cout << "MOD:" << MOD << "\nGrade:" << Grade << endl;
+	FPD_G FPD_Grades;
+	rt = Func_FPD(source, FPD_Grades, Xmaxima, Ymaxima, grade.SC_Score, GT, width, height);
+	if (rt == false)
+		return false;
 
-	Func_FPD(source, Xmaxima, Ymaxima, grade.SC_Score, GT, width, height);
+	Func_CalculatePFDAverageGrade(FPD_Grades, grade);
 
-	cout << "\nGT:" << GT << endl;
 
 	//delete
 	delete mappedx;
@@ -1602,7 +1922,7 @@ bool Func(CImg* pImg, Grade &grade) {
 int main() {
 	CImg* pImg = create_image();
 	//BOOL rt = pImg->AttachFromFile("..//imgs//2-1-0.bmp");
-	BOOL rt = pImg->AttachFromFile("..//imgs//code-test-7.bmp");
+	BOOL rt = pImg->AttachFromFile("..//imgs//code-test-3.bmp");
 	if (!rt)
 		return -1;
 	Grade Gr;
@@ -1615,6 +1935,7 @@ int main() {
 		cout << "MOD_Score = " << Gr.MOD_Score << "\tMOD_Grade = " << Gr.MOD << endl;
 		cout << "AN_Score = " << Gr.AN_Score << "\tAN_Grade = " << Gr.AN << endl;
 		cout << "GN_Score = " << Gr.GN_Score << "\tGN_Grade = " << Gr.GN << endl;
+		cout << "FPD = " << Gr.FPD << endl;
 	}
 	else
 		return -2;
