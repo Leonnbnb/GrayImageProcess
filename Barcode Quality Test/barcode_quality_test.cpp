@@ -181,6 +181,87 @@ bool Func_FindFarmost(vector<unsigned int > loc, unsigned int &left, unsigned in
 	return true;
 }
 
+//得到灰度最大值最小值以及求得GT 
+bool Func_GetGT(unsigned char** img, unsigned char &maxgray, unsigned char &mingray, double &SC, double &GT, const unsigned int topmost, const unsigned int downmost, const long width, const long height) {
+	if (img == NULL || width == 0 || height == 0 || topmost<0 || downmost>height)
+		return false;
+
+	unsigned long long tab[256];
+	memset(tab, 0, 256 * sizeof(unsigned long long));
+
+	for (long i = topmost; i < downmost; ++i) {
+		for (long j = 0; j < width; ++j) {
+			++tab[(unsigned int)img[i][j]];
+		}
+	}
+
+	unsigned long long limit = 0.1*width*height;
+	unsigned long long count = 0;
+	unsigned long long sum = 0;
+
+	for (int i = 0; i < 256; ++i) {
+		if (count < limit) {
+			if (tab[i] > 0) {
+				if (count + tab[i] > limit) {
+					unsigned long long temp = limit - count;
+					count += temp;
+					sum += i*temp;
+				}
+				else {
+					count += tab[i];
+					sum += i*tab[i];
+				}
+			}
+			else
+				continue;
+		}
+		else
+			break;
+	}
+	double avglower = (double)sum / count;
+
+	count = 0;
+	sum = 0;
+	for (int i = 255; i >= 0; --i) {
+		if (count < limit) {
+			if (tab[i] > 0) {
+				if (count + tab[i] > limit) {
+					unsigned long long temp = limit - count;
+					count += temp;
+					sum += i*temp;
+				}
+				else {
+					count += tab[i];
+					sum += i*tab[i];
+				}
+			}
+			else
+				continue;
+		}
+		else
+			break;
+	}
+	double avggreater = (double)sum / count;
+
+	SC = avggreater - avglower;
+
+	GT = (avglower + avggreater) / 2;
+
+	maxgray = avggreater;
+	mingray = avglower;
+	/*for (unsigned long y = topmost; y <= (downmost < height ? downmost : height); ++y) {
+		for (unsigned long x = 0; x <= width; ++x) {
+			unsigned char curgrayvalue = img[y][x];
+			if (curgrayvalue < mingray)
+				mingray = curgrayvalue;
+			if (curgrayvalue > maxgray)
+				maxgray = curgrayvalue;
+		}
+	}
+	GT = (mingray*1.0 + maxgray*1.0 / 2.0);*/
+	return true;
+}
+
 bool Func(CImg* pImg, Grade &grade) {
 	if (pImg == NULL)
 		return false;
@@ -219,20 +300,24 @@ bool Func(CImg* pImg, Grade &grade) {
 	//	cout << var << " ";
 	//}
 	Func_SmoothDifference(AMX, MaxOfAMX, 0.35);
-	cout << endl;
 	//for each (auto var in AMX) {
 	//	cout << var << " ";
 	//}
 	vector<unsigned int> loc;//波峰的位置
 	Func_FindSurvivingPeak(AMX, loc);
-	cout << endl;
 	//for each (auto var in loc) {
 	//	cout << var << " ";
 	//}
-	unsigned int left = 0, right = height - 1;
-	Func_FindFarmost(loc, left, right);
-	//cout << "LEFT:" << left << " RIGHT:" << right << endl;
-	__Func_DrawLine(source, left, right, width, height, 0xEE);
+	unsigned int topmost = 0, downmost = height - 1;
+	Func_FindFarmost(loc, topmost, downmost);
+#ifdef _DEBUG
+	__Func_DrawLine(source, topmost, downmost, width, height, 0xEE);
+#endif
+
+	unsigned char MaxGrayValue = 0, MinGrayValue = 255;//条码区域最大最小灰度值
+	double GT = 0, SC = 0;//全局阈值
+	Func_GetGT(source, MaxGrayValue, MinGrayValue, SC, GT, topmost, downmost, width, height);
+	//cout << "\nMAX:" << (unsigned int)MaxGrayValue << " MIN:" << (unsigned int)MinGrayValue << " GT:" << GT << endl;
 
 
 
@@ -249,7 +334,7 @@ bool Func(CImg* pImg, Grade &grade) {
 //-----程序入口-----
 int main() {
 	CImg* pImg = create_image();
-	BOOL rt = pImg->AttachFromFile("..//imgs//barcodes//barcode-test-40.bmp");
+	BOOL rt = pImg->AttachFromFile("..//imgs//barcodes//barcode-test-06.bmp");
 	if (!rt)
 		return -1;
 
