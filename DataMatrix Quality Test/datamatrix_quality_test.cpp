@@ -1137,7 +1137,7 @@ bool Func_Mapping(double** G, long long* &mx, long long* &my, const long width, 
 
 //将映射后的一维信号进行滤波
 bool Func_Gauss(long long* mx, long long* my, long long* &Amx, long long* &Amy, const long width, const long height, const int* model, const int M) {
-	if (mx == NULL || my == NULL || Amx == NULL || Amy == NULL)
+	if (mx == NULL || Amx == NULL)
 		return false;
 	Amx[0] = (mx[0] * model[3] + mx[1] * model[4] + mx[2] * model[5] + mx[3] * model[6]) / M;
 	Amx[1] = (mx[0] * model[2] + mx[1] * model[3] + mx[2] * model[4] + mx[3] * model[5] + mx[4] * model[6]) / M;
@@ -1148,6 +1148,9 @@ bool Func_Gauss(long long* mx, long long* my, long long* &Amx, long long* &Amy, 
 	Amx[height - 3] = (mx[height - 6] * model[0] + mx[height - 5] * model[1] + mx[height - 4] * model[2] + mx[height - 3] * model[3] + mx[height - 2] * model[4] + mx[height - 1] * model[5]) / M;
 	Amx[height - 2] = (mx[height - 5] * model[0] + mx[height - 4] * model[1] + mx[height - 3] * model[2] + mx[height - 2] * model[3] + mx[height - 1] * model[4]) / M;
 	Amx[height - 1] = (mx[height - 4] * model[0] + mx[height - 3] * model[1] + mx[height - 2] * model[2] + mx[height - 1] * model[3]) / M;
+
+	if (my == NULL || Amy == NULL)
+		return false;
 
 	Amy[0] = (my[0] * model[3] + my[1] * model[4] + my[2] * model[5] + my[3] * model[6]) / M;
 	Amy[1] = (my[0] * model[2] + my[1] * model[3] + my[2] * model[4] + my[3] * model[5] + my[4] * model[6]) / M;
