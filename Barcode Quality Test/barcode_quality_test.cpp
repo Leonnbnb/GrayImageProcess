@@ -96,8 +96,8 @@ string NowTimeToFileName(const string preStr, const string suffixalNameStr) {
 }
 
 //根据得到的波峰点位绘制网格（仅供调试输出中间结果）
-bool __Func_DrawLine(unsigned char** img, unsigned int left, unsigned int right, const long width, const long height, const unsigned char color) {
-	if (img == NULL || right <= left || right - left < 2)
+bool __Func_DrawLine(unsigned char** img, unsigned int topmost, unsigned int downmost, const long width, const long height, const unsigned char color) {
+	if (img == NULL || downmost <= topmost || downmost - topmost < 2)
 		return false;
 
 	unsigned char** preview = new unsigned char*[height];
@@ -110,13 +110,13 @@ bool __Func_DrawLine(unsigned char** img, unsigned int left, unsigned int right,
 	}
 
 	for (long i = 0; i < width; ++i) {
-		preview[left][i] = (unsigned char)color;
-		preview[right][i] = (unsigned char)color;
+		preview[topmost][i] = (unsigned char)color;
+		preview[downmost][i] = (unsigned char)color;
 	}
 
 	CImg * pPreviewImg = create_image();
 	pPreviewImg->InitArray8(preview, height, width);
-	string filepath = NowTimeToFileName("..//results//bqt//DrawLine", ".bmp");
+	string filepath = NowTimeToFileName("..//results//bqt//DrawLineToArea", ".bmp");
 	pPreviewImg->SaveToFile(filepath.c_str());
 
 	for (unsigned long i = 0; i < height; ++i) {
@@ -128,6 +128,72 @@ bool __Func_DrawLine(unsigned char** img, unsigned int left, unsigned int right,
 	return true;
 }
 
+bool __Func_DrawLine(unsigned char** img, unsigned int topmost, unsigned int downmost, vector<unsigned long > loc, const long width, const long height, const unsigned char color) {
+	if (img == NULL || downmost <= topmost || downmost - topmost < 2)
+		return false;
+
+	unsigned char** preview = new unsigned char*[height];
+	for (unsigned long i = 0; i < height; ++i) {
+		preview[i] = new unsigned char[width];
+	}
+
+	for (unsigned long i = 0; i < height; ++i) {
+		memcpy(preview[i], img[i], width * sizeof(unsigned char));
+	}
+
+	for (long i = 0; i < width; ++i) {
+		preview[topmost][i] = (unsigned char)color;
+		preview[downmost][i] = (unsigned char)color;
+	}
+
+	loc.push_back(width - 1);
+	int flag = 1;
+	unsigned long xprev = 0;
+	for each(unsigned long x in loc) {
+		if (x < width) {
+			for (unsigned long y = topmost; y <= downmost; ++y) {
+				preview[y][x] = (unsigned char)color;
+
+				_ASSERTE(_CrtCheckMemory());
+			}
+		}
+		if (flag > 0) {
+			if (x < width) {
+				for (unsigned long i = xprev; i <= x; ++i) {
+					for (unsigned long y = topmost; y <= downmost; ++y) {
+						preview[y][i] = (unsigned char)color;
+						_ASSERTE(_CrtCheckMemory());
+					}
+				}
+			}
+		}
+		else {
+			if (x < width) {
+				for (unsigned long i = xprev; i <= x; ++i) {
+					for (unsigned long y = topmost; y <= downmost; ++y) {
+						preview[y][i] = 0;
+						_ASSERTE(_CrtCheckMemory());
+					}
+				}
+			}
+		}
+		xprev = x;
+		flag *= -1;
+	}
+
+	CImg * pPreviewImg = create_image();
+	pPreviewImg->InitArray8(preview, height, width);
+	string filepath = NowTimeToFileName("..//results//bqt//DrawLineOfGrid", ".bmp");
+	pPreviewImg->SaveToFile(filepath.c_str());
+
+	for (unsigned long i = 0; i < height; ++i) {
+		delete[] preview[i];
+	}
+	delete[] preview;
+	preview = NULL;
+
+	return true;
+}
 #endif
 
 //将图片沿X方向映射，累加灰度值
@@ -309,16 +375,20 @@ bool _Func_GetSelectedRowPixels(unsigned char** img, vector<unsigned char> &rowS
 }
 
 //将分割线经过的一维信号以GT为界限划分
-bool _Func_Split(vector<unsigned char > &rowSet, double GT, vector<vector<unsigned char > > &sets) {
+bool _Func_Split(vector<unsigned char > &rowSet, vector<unsigned long > &locSet, double GT, vector<vector<unsigned char > > &sets) {
 	if (rowSet.size() == 0)
 		return false;
+	//vector<unsigned long> locSet;
+	unsigned long loc = 0;
 	//掐头:)
 	if (*rowSet.begin() >= GT) {
 		vector<unsigned char >::iterator pfront = rowSet.begin();
 		while (pfront < rowSet.end() && *pfront >= GT)
 			++pfront;
+		loc = pfront - rowSet.begin();
 		rowSet.erase(rowSet.begin(), pfront);
 	}
+	locSet.push_back(loc);
 
 	//如果为纯色图片，上一步操作会将所有元素清除
 	if (rowSet.size() == 0)
@@ -346,6 +416,7 @@ bool _Func_Split(vector<unsigned char > &rowSet, double GT, vector<vector<unsign
 		//条区域（黑色）
 		while (p < rowSet.end() && *p <= GT) {
 			down.push_back(*p);
+			++loc;
 			if (p < rowSet.end())
 				++p;
 			else
@@ -353,12 +424,14 @@ bool _Func_Split(vector<unsigned char > &rowSet, double GT, vector<vector<unsign
 		}
 		if (down.size() != 0) {
 			sets.push_back(down);
+			locSet.push_back(loc);
 			down.clear();
 		}
 
 		//空白区域（白色）
 		while (p < rowSet.end() && *p > GT) {
 			up.push_back(*p);
+			++loc;
 			if (p < rowSet.end())
 				++p;
 			else
@@ -366,6 +439,7 @@ bool _Func_Split(vector<unsigned char > &rowSet, double GT, vector<vector<unsign
 		}
 		if (up.size() != 0) {
 			sets.push_back(up);
+			locSet.push_back(loc);
 			up.clear();
 		}
 	}
@@ -434,15 +508,17 @@ bool _Func_ECminERNmax(vector<vector<vector<unsigned char > > > dataSet, Grade &
 }
 
 //根据topmost和downmost两条界限确定的条码范围，进行分割，建立多条扫描线进行横向扫描
-bool Func_Scan(unsigned char** img, double GT, const unsigned int topmost, const unsigned int downmost, const long width, const long height, Grade &grade) {
+bool Func_Scan(unsigned char** img, vector<vector<unsigned long > > &locDataSet, double GT, const unsigned int topmost, const unsigned int downmost, const long width, const long height, Grade &grade) {
 	if (img == NULL)
 		return false;
 	if (width == 0 || height == 0)
 		return false;
 	if (topmost<0 || downmost>height)
 		return false;
-	//所有扫描线的数据集合
-	vector<vector<vector<unsigned char > > > dataSet;
+	//所有扫描线的像素数据集合
+	vector<vector<vector<unsigned char > > > pixDataSet;
+
+	//vector<vector<unsigned long > > locDataSet;
 	//扫描线之间的距离
 	double distance = (downmost - topmost)*1.0 / 10.0;
 	for (long y = topmost; y <= downmost; y += distance) {
@@ -451,11 +527,13 @@ bool Func_Scan(unsigned char** img, double GT, const unsigned int topmost, const
 		_Func_GetSelectedRowPixels(img, rowPixels, topmost, width);
 		//将当前扫描线的像素灰度值分段
 		vector<vector<unsigned char > > peakAndvalley;
-		_Func_Split(rowPixels, GT, peakAndvalley);
-		dataSet.push_back(peakAndvalley);
+		vector<unsigned long > locSet;
+		_Func_Split(rowPixels, locSet, GT, peakAndvalley);
+		pixDataSet.push_back(peakAndvalley);
+		locDataSet.push_back(locSet);
 	}
 
-	_Func_ECminERNmax(dataSet, grade);
+	_Func_ECminERNmax(pixDataSet, grade);
 	grade.MOD = grade.ECmin*1.0 / grade.SC*1.0;
 
 	return true;
@@ -532,6 +610,35 @@ bool Func_Grading(Grade &grade) {
 	return true;
 }
 
+//确定每个条区空白区的宽度
+bool Func_GetModuleWidth(vector<vector<unsigned long > > locDataSet, vector<unsigned long > &loc) {
+	if (locDataSet.size() == 0)
+		return false;
+	//for each(auto p in locDataSet) {
+	//	for each(auto pp in p) {
+	//		cout << pp << " ";
+	//	}
+	//	cout << endl;
+	//}
+	for (unsigned long i = 0; i < locDataSet.begin()->size() * 2; ++i) {
+		long long sum = 0;
+		long long count = 0;
+		bool exist = false;
+		for (vector<vector<unsigned long > >::iterator p = locDataSet.begin(); p < locDataSet.end(); ++p) {
+			if ((p->begin() + i) < p->end()) {
+				sum += *(p->begin() + i);
+				++count;
+				exist = true;
+			}
+		}
+		if (exist == false)
+			break;
+		if (count != 0)
+			loc.push_back(sum / count);
+	}
+	return true;
+}
+
 //-----功能入口-----
 bool Func(CImg* pImg, Grade &grade) {
 	if (pImg == NULL)
@@ -567,9 +674,9 @@ bool Func(CImg* pImg, Grade &grade) {
 	unsigned int topmost = 0, downmost = height - 1;//条码区域的上下界
 	Func_FindFarmost(loc, topmost, downmost);
 
-#ifdef _DEBUG
-	__Func_DrawLine(source, topmost, downmost, width, height, 0xEE);
-#endif
+	//#ifdef _DEBUG
+	//	__Func_DrawLine(source, topmost, downmost, width, height, 0xEE);
+	//#endif
 
 	unsigned char MaxGrayValue = 0, MinGrayValue = 255;//条码区域最大最小灰度值
 	double GT = 0, SC = 0;//全局阈值
@@ -580,8 +687,14 @@ bool Func(CImg* pImg, Grade &grade) {
 	grade.SC = SC;
 	grade.GT = GT;
 	if (SC != 0) {
-		Func_Scan(source, GT, topmost, downmost, width, height, grade);
+		vector<vector<unsigned long > > locDataSet;
+		Func_Scan(source, locDataSet, GT, topmost, downmost, width, height, grade);
 		Func_Grading(grade);
+		vector<unsigned long > loc;
+		Func_GetModuleWidth(locDataSet, loc);
+#ifdef _DEBUG
+		__Func_DrawLine(source, topmost, downmost, loc, width, height, 0xFF);
+#endif
 	}
 
 	//delete
@@ -597,7 +710,7 @@ bool Func(CImg* pImg, Grade &grade) {
 //-----程序入口-----
 int main() {
 	CImg* pImg = create_image();
-	BOOL rt = pImg->AttachFromFile("..//imgs//barcodes//barcode-test-06.bmp");
+	BOOL rt = pImg->AttachFromFile("..//imgs//barcodes//barcode-test-07.bmp");
 	if (!rt)
 		return -1;
 
@@ -610,6 +723,6 @@ int main() {
 		<< "\nDefects_G:\t" << grade.Defects_Grade << " Defects_S:\t" << grade.Defects << endl;
 
 
-	getchar();
+	//getchar();
 	return 0;
 }
