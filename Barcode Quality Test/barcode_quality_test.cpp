@@ -30,13 +30,21 @@ typedef enum GradeSymbol {
 
 //各项等级评分数据以及等级
 typedef struct Grade {
+	//最高反射率
 	unsigned char Rmax;
+	//最低反射率
 	unsigned char Rmin;
+	//符号反差
 	double SC;
+	//最小边缘反差
 	unsigned char ECmin;
+	//最大单元反射率不均匀度
 	unsigned char ERNmax;
+	//缺陷度
 	double Defects;
+	//调制比
 	double MOD;
+	//全局阈值
 	double GT;
 	GradeSymbol SC_Grade;
 	GradeSymbol MOD_Grade;
@@ -162,6 +170,8 @@ bool Func_MappedDifference(vector<long long > MX, vector<long long > &AMX, long 
 bool Func_SmoothDifference(vector<long long > &AMX, const long long MaxOfAMX, const float M) {
 	if (AMX.size() <= 1 || MaxOfAMX == 0 || M == 0)
 		return false;
+
+	//低于门限值的数据以-1填充，方便后面的找波峰的操作
 	for (vector<long long>::iterator p = AMX.begin(); p < AMX.end(); ++p) {
 		if (*p < (MaxOfAMX*M)) {
 			*p = -1;
@@ -169,8 +179,6 @@ bool Func_SmoothDifference(vector<long long > &AMX, const long long MaxOfAMX, co
 	}
 	if (*AMX.begin() < 0)
 		*AMX.begin() = 1;
-	//if (*(AMX.end() - 1) < 0)
-	//	*(AMX.end() - 1) = 1;
 	return true;
 }
 
@@ -178,14 +186,17 @@ bool Func_SmoothDifference(vector<long long > &AMX, const long long MaxOfAMX, co
 bool Func_FindSurvivingPeak(vector<long long > &AMX, vector<unsigned int > &loc) {
 	if (AMX.size() <= 1)
 		return false;
+
+	//防止条码没有上边界
 	if (*AMX.begin() > *(AMX.begin() + 1))
 		loc.push_back(0);
+
 	for (vector<long long>::iterator p = AMX.begin() + 1; p < AMX.end() - 1; ++p) {
 		if (*p > 0 && *p > *(p - 1) && *p > *(p + 1)) {
 			loc.push_back((unsigned int)(p - AMX.begin()));
-			//prev = p;
 		}
 	}
+	//防止条码没有下边界
 	loc.push_back((unsigned int)((AMX.end() - 1) - AMX.begin()));
 	return true;
 }
@@ -196,6 +207,7 @@ bool Func_FindFarmost(vector<unsigned int > loc, unsigned int &left, unsigned in
 		return false;
 	unsigned int distance = 0;
 	for (vector<unsigned int >::iterator p = loc.begin() + 1; p < loc.end(); ++p) {
+		//两峰之间的距离
 		if (*p - *(p - 1) > distance) {
 			left = *(p - 1) + 5;
 			right = *p - 5;
@@ -210,16 +222,23 @@ bool Func_GetGT(unsigned char** img, unsigned char &maxgray, unsigned char &ming
 	if (img == NULL || width == 0 || height == 0 || topmost<0 || downmost>height)
 		return false;
 
+	//指定区域的灰度直方图
 	unsigned long long tab[256];
 	memset(tab, 0, 256 * sizeof(unsigned long long));
 
+	//指定区域像素个数
+	long long pixels = 0;
+	//使用指定区域初始化直方图
 	for (long i = topmost; i < downmost; ++i) {
 		for (long j = 0; j < width; ++j) {
 			++tab[(unsigned int)img[i][j]];
+			++pixels;
 		}
 	}
 
-	unsigned long long limit = 0.1*width*height;
+	//前百分之十的像素
+	unsigned long long limit = 0.1*pixels;
+
 	unsigned long long count = 0;
 	unsigned long long sum = 0;
 
@@ -242,6 +261,7 @@ bool Func_GetGT(unsigned char** img, unsigned char &maxgray, unsigned char &ming
 		else
 			break;
 	}
+	//前百分之十的最小灰度值的像素均值
 	double avglower = (double)sum / count;
 
 	count = 0;
@@ -265,24 +285,14 @@ bool Func_GetGT(unsigned char** img, unsigned char &maxgray, unsigned char &ming
 		else
 			break;
 	}
+	//前百分之十的最大灰度值的像素均值
 	double avggreater = (double)sum / count;
 
 	SC = avggreater - avglower;
-
 	GT = (avglower + avggreater) / 2;
-
 	maxgray = avggreater;
 	mingray = avglower;
-	/*for (unsigned long y = topmost; y <= (downmost < height ? downmost : height); ++y) {
-		for (unsigned long x = 0; x <= width; ++x) {
-			unsigned char curgrayvalue = img[y][x];
-			if (curgrayvalue < mingray)
-				mingray = curgrayvalue;
-			if (curgrayvalue > maxgray)
-				maxgray = curgrayvalue;
-		}
-	}
-	GT = (mingray*1.0 + maxgray*1.0 / 2.0);*/
+
 	return true;
 }
 
@@ -321,6 +331,10 @@ bool _Func_Split(vector<unsigned char > &rowSet, double GT, vector<vector<unsign
 		rowSet.erase(prear, rowSet.end());
 	}
 
+	//For safe
+	if (rowSet.size() == 0)
+		return false;
+
 	//切割成段
 	vector<unsigned char >::iterator p = rowSet.begin();
 	vector<unsigned char > up, down;
@@ -329,10 +343,9 @@ bool _Func_Split(vector<unsigned char > &rowSet, double GT, vector<vector<unsign
 		if (p >= rowSet.end())
 			break;
 
-		//
+		//条区域（黑色）
 		while (p < rowSet.end() && *p <= GT) {
 			down.push_back(*p);
-			//cout << (unsigned int)*p << " ";//
 			if (p < rowSet.end())
 				++p;
 			else
@@ -340,14 +353,12 @@ bool _Func_Split(vector<unsigned char > &rowSet, double GT, vector<vector<unsign
 		}
 		if (down.size() != 0) {
 			sets.push_back(down);
-			//cout << endl;//
 			down.clear();
 		}
 
-		//
+		//空白区域（白色）
 		while (p < rowSet.end() && *p > GT) {
 			up.push_back(*p);
-			//cout << (unsigned int)*p << " ";//
 			if (p < rowSet.end())
 				++p;
 			else
@@ -355,13 +366,9 @@ bool _Func_Split(vector<unsigned char > &rowSet, double GT, vector<vector<unsign
 		}
 		if (up.size() != 0) {
 			sets.push_back(up);
-			//cout << endl;//
 			up.clear();
 		}
-
 	}
-
-
 }
 
 //根据分段后的数据获得最小EC值和最大ERN值
@@ -370,19 +377,12 @@ bool _Func_ECminERNmax(vector<vector<vector<unsigned char > > > dataSet, Grade &
 		return false;
 
 	unsigned char ECmin = 255, ERNmax = 0;
-
-	//pair(first = min second = max);
+	//pair第一个元素是最小值，第二个元素是最大值
 	for each(auto rowdata in dataSet) {
 		//每一条扫描线上的每一段中的最小最大灰度值的集合
 		vector<pair<unsigned char, unsigned char > > minmaxSet;
 		for each(auto seg in rowdata) {
 			unsigned char max = 0, min = 255;
-			/*for each(auto pix in seg) {
-				if (pix >= max)
-					max = pix;
-				if (pix <= min)
-					min = pix;
-			}*/
 			for (vector<unsigned char >::iterator ppix = seg.begin() + 1; ppix < seg.end() - 1; ++ppix) {
 				if (*ppix >= *(ppix + 1) && *ppix >= *(ppix - 1) && *ppix > max)
 					max = *ppix;
@@ -441,11 +441,15 @@ bool Func_Scan(unsigned char** img, double GT, const unsigned int topmost, const
 		return false;
 	if (topmost<0 || downmost>height)
 		return false;
+	//所有扫描线的数据集合
 	vector<vector<vector<unsigned char > > > dataSet;
+	//扫描线之间的距离
 	double distance = (downmost - topmost)*1.0 / 10.0;
 	for (long y = topmost; y <= downmost; y += distance) {
+		//指定扫描线的像素灰度值
 		vector<unsigned char> rowPixels;
 		_Func_GetSelectedRowPixels(img, rowPixels, topmost, width);
+		//将当前扫描线的像素灰度值分段
 		vector<vector<unsigned char > > peakAndvalley;
 		_Func_Split(rowPixels, GT, peakAndvalley);
 		dataSet.push_back(peakAndvalley);
@@ -467,7 +471,6 @@ bool Func_Grading(Grade &grade) {
 
 	//SC Grade
 	double SC_rate = grade.SC / grade.Rmax;
-	//cout << "SC_rate:\t" << SC_rate << endl;
 	if (SC_rate >= 0.7) {
 		grade.SC_Grade = GradeSymbol::A;
 	}
@@ -486,7 +489,6 @@ bool Func_Grading(Grade &grade) {
 
 	//ECmin Grade
 	double ECmin_rate = grade.ECmin / grade.SC*1.0;//
-	//cout << "ECmin_rate:\t" << ECmin_rate << endl;
 	if (ECmin_rate >= 0.15)
 		grade.ECmin_Grade = GradeSymbol::A;
 	else
@@ -527,18 +529,15 @@ bool Func_Grading(Grade &grade) {
 		grade.Defects_Grade = GradeSymbol::E;
 	}
 
-	//cout << endl;
-
 	return true;
 }
 
+//-----功能入口-----
 bool Func(CImg* pImg, Grade &grade) {
 	if (pImg == NULL)
 		return false;
 
-	long width;
-	long height;
-
+	long width, height;//图片的尺寸
 	width = pImg->GetWidthPixel();
 	height = pImg->GetHeight();
 
@@ -556,30 +555,18 @@ bool Func(CImg* pImg, Grade &grade) {
 		}
 	}
 
-
 	//action
 	vector<long long > MX;//将图像灰度值横向映射累加
 	Func_Mapping(source, MX, width, height);
-	//for each (auto var in MX) {
-	//	cout << var << " ";
-	//}
 	vector<long long > AMX;//将累加的灰度值进行差分运算
 	long long MaxOfAMX = 0;//AMX中的最大值
 	Func_MappedDifference(MX, AMX, MaxOfAMX);
-	//for each (auto var in AMX) {
-	//	cout << var << " ";
-	//}
 	Func_SmoothDifference(AMX, MaxOfAMX, 0.35);
-	//for each (auto var in AMX) {
-	//	cout << var << " ";
-	//}
 	vector<unsigned int> loc;//波峰的位置
 	Func_FindSurvivingPeak(AMX, loc);
-	//for each (auto var in loc) {
-	//	cout << var << " ";
-	//}
-	unsigned int topmost = 0, downmost = height - 1;
+	unsigned int topmost = 0, downmost = height - 1;//条码区域的上下界
 	Func_FindFarmost(loc, topmost, downmost);
+
 #ifdef _DEBUG
 	__Func_DrawLine(source, topmost, downmost, width, height, 0xEE);
 #endif
@@ -587,16 +574,11 @@ bool Func(CImg* pImg, Grade &grade) {
 	unsigned char MaxGrayValue = 0, MinGrayValue = 255;//条码区域最大最小灰度值
 	double GT = 0, SC = 0;//全局阈值
 	Func_GetGT(source, MaxGrayValue, MinGrayValue, SC, GT, topmost, downmost, width, height);
-	//cout << "\nMAX:" << (unsigned int)MaxGrayValue << " MIN:" << (unsigned int)MinGrayValue << " GT:" << GT << endl;
+	//将得到的结果存储
 	grade.Rmax = MaxGrayValue;
 	grade.Rmin = MinGrayValue;
 	grade.SC = SC;
 	grade.GT = GT;
-	//vector<unsigned char> set;
-	//Func_GetSelectedRowPixels(source, set, topmost, width);
-	//for each (auto var in set) {
-	//	cout << (unsigned int)var << " ";
-	//}
 	if (SC != 0) {
 		Func_Scan(source, GT, topmost, downmost, width, height, grade);
 		Func_Grading(grade);
@@ -615,7 +597,7 @@ bool Func(CImg* pImg, Grade &grade) {
 //-----程序入口-----
 int main() {
 	CImg* pImg = create_image();
-	BOOL rt = pImg->AttachFromFile("..//imgs//barcodes//barcode-test-42.bmp");
+	BOOL rt = pImg->AttachFromFile("..//imgs//barcodes//barcode-test-06.bmp");
 	if (!rt)
 		return -1;
 
