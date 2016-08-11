@@ -710,7 +710,7 @@ bool Func(CImg* pImg, Grade &grade) {
 //-----³ÌÐòÈë¿Ú-----
 int main() {
 	CImg* pImg = create_image();
-	BOOL rt = pImg->AttachFromFile("..//imgs//barcodes//barcode-test-07.bmp");
+	BOOL rt = pImg->AttachFromFile("..//imgs//barcodes//barcode-test-13.bmp");
 	if (!rt)
 		return -1;
 
