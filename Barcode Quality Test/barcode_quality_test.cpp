@@ -30,9 +30,33 @@ typedef enum GradeSymbol {
 
 //各项等级评分数据以及等级
 typedef struct Grade {
-	GradeSymbol SC;
-	double SC_Score;
-	GradeSymbol MOD;
+	unsigned char Rmax;
+	unsigned char Rmin;
+	double SC;
+	unsigned char ECmin;
+	unsigned char ERNmax;
+	double Defects;
+	double MOD;
+	double GT;
+	GradeSymbol SC_Grade;
+	GradeSymbol MOD_Grade;
+	GradeSymbol Defects_Grade;
+	GradeSymbol Rmin_Grade;
+	GradeSymbol ECmin_Grade;
+	Grade() {
+		Rmax = 0;
+		Rmin = 0;
+		SC = 0;
+		ECmin = 0;
+		ERNmax = 0;
+		Defects = 0;
+		MOD = 0;
+		SC_Grade = GradeSymbol::E;
+		MOD_Grade = GradeSymbol::E;
+		Defects_Grade = GradeSymbol::E;
+		Rmin_Grade = GradeSymbol::E;
+		ECmin_Grade = GradeSymbol::E;;
+	}
 
 }Grade;
 
@@ -262,6 +286,252 @@ bool Func_GetGT(unsigned char** img, unsigned char &maxgray, unsigned char &ming
 	return true;
 }
 
+//获得指定行号的像素值
+bool _Func_GetSelectedRowPixels(unsigned char** img, vector<unsigned char> &rowSet, const unsigned char rowNum, const long width) {
+	if (img == NULL)
+		return false;
+	if (width == 0)
+		return false;
+	for (unsigned long x = 0; x < width; ++x) {
+		rowSet.push_back(img[rowNum][x]);
+	}
+	return true;
+}
+
+//将分割线经过的一维信号以GT为界限划分
+bool _Func_Split(vector<unsigned char > &rowSet, double GT, vector<vector<unsigned char > > &sets) {
+	if (rowSet.size() == 0)
+		return false;
+	//掐头:)
+	if (*rowSet.begin() >= GT) {
+		vector<unsigned char >::iterator pfront = rowSet.begin();
+		while (pfront < rowSet.end() && *pfront >= GT)
+			++pfront;
+		rowSet.erase(rowSet.begin(), pfront);
+	}
+
+	//如果为纯色图片，上一步操作会将所有元素清除
+	if (rowSet.size() == 0)
+		return false;
+	//去尾:)
+	if (*prev(rowSet.end()) >= GT) {
+		vector<unsigned char >::iterator prear = prev(rowSet.end());
+		while (prear > rowSet.begin() && *prear > GT)
+			--prear;
+		rowSet.erase(prear, rowSet.end());
+	}
+
+	//切割成段
+	vector<unsigned char >::iterator p = rowSet.begin();
+	vector<unsigned char > up, down;
+
+	while (p < rowSet.end()) {
+		if (p >= rowSet.end())
+			break;
+
+		//
+		while (p < rowSet.end() && *p <= GT) {
+			down.push_back(*p);
+			//cout << (unsigned int)*p << " ";//
+			if (p < rowSet.end())
+				++p;
+			else
+				break;
+		}
+		if (down.size() != 0) {
+			sets.push_back(down);
+			//cout << endl;//
+			down.clear();
+		}
+
+		//
+		while (p < rowSet.end() && *p > GT) {
+			up.push_back(*p);
+			//cout << (unsigned int)*p << " ";//
+			if (p < rowSet.end())
+				++p;
+			else
+				break;
+		}
+		if (up.size() != 0) {
+			sets.push_back(up);
+			//cout << endl;//
+			up.clear();
+		}
+
+	}
+
+
+}
+
+//根据分段后的数据获得最小EC值和最大ERN值
+bool _Func_ECminERNmax(vector<vector<vector<unsigned char > > > dataSet, Grade &grade) {
+	if (dataSet.size() == 0)
+		return false;
+
+	unsigned char ECmin = 255, ERNmax = 0;
+
+	//pair(first = min second = max);
+	for each(auto rowdata in dataSet) {
+		//每一条扫描线上的每一段中的最小最大灰度值的集合
+		vector<pair<unsigned char, unsigned char > > minmaxSet;
+		for each(auto seg in rowdata) {
+			unsigned char max = 0, min = 255;
+			/*for each(auto pix in seg) {
+				if (pix >= max)
+					max = pix;
+				if (pix <= min)
+					min = pix;
+			}*/
+			for (vector<unsigned char >::iterator ppix = seg.begin() + 1; ppix < seg.end() - 1; ++ppix) {
+				if (*ppix >= *(ppix + 1) && *ppix >= *(ppix - 1) && *ppix > max)
+					max = *ppix;
+				if (*ppix <= *(ppix + 1) && *ppix <= *(ppix - 1) && *ppix < min)
+					min = *ppix;
+			}
+			//段上的最小最大灰度值
+			pair<unsigned char, unsigned char > minmaxofSeg;
+			minmaxofSeg.first = min;
+			minmaxofSeg.second = max;
+			minmaxSet.push_back(minmaxofSeg);
+		}
+
+		//记录下每条扫描线上的EC和ERN
+		vector<unsigned char > ECset;
+		vector<unsigned char > ERNset;
+		if (minmaxSet.size() <= 1)
+			break;
+		ERNset.push_back(abs(minmaxSet.begin()->second - minmaxSet.begin()->first));
+		for (auto p = minmaxSet.begin() + 1; p < minmaxSet.end(); ++p) {
+			unsigned char EC;
+			unsigned char ERN;
+			//找到相邻的SEGMENT中垂直距离最远的值
+			EC = abs((p - 1)->first - p->second) > abs((p - 1)->second - p->first) ?
+				abs((p - 1)->first - p->second) : abs((p - 1)->second - p->first);
+			ECset.push_back(EC);
+
+			//将每一个SEGMENT中的最大最小值的差值记录下来
+			ERNset.push_back(abs(p->second - p->first));
+		}
+
+		//找到ECset和ERNset中的EC最小值和ERN最大值
+		for each(auto var in ECset) {
+			if (var <= ECmin) {
+				ECmin = var;
+			}
+		}
+		for each(auto var in ERNset) {
+			if (var >= ERNmax) {
+				ERNmax = var;
+			}
+		}
+	}
+
+	grade.ERNmax = ERNmax;
+	grade.ECmin = ECmin;
+
+	return true;
+}
+
+//根据topmost和downmost两条界限确定的条码范围，进行分割，建立多条扫描线进行横向扫描
+bool Func_Scan(unsigned char** img, double GT, const unsigned int topmost, const unsigned int downmost, const long width, const long height, Grade &grade) {
+	if (img == NULL)
+		return false;
+	if (width == 0 || height == 0)
+		return false;
+	if (topmost<0 || downmost>height)
+		return false;
+	vector<vector<vector<unsigned char > > > dataSet;
+	double distance = (downmost - topmost)*1.0 / 10.0;
+	for (long y = topmost; y <= downmost; y += distance) {
+		vector<unsigned char> rowPixels;
+		_Func_GetSelectedRowPixels(img, rowPixels, topmost, width);
+		vector<vector<unsigned char > > peakAndvalley;
+		_Func_Split(rowPixels, GT, peakAndvalley);
+		dataSet.push_back(peakAndvalley);
+	}
+
+	_Func_ECminERNmax(dataSet, grade);
+	grade.MOD = grade.ECmin*1.0 / grade.SC*1.0;
+
+	return true;
+}
+
+//根据各项数据评级
+bool Func_Grading(Grade &grade) {
+	//Rmin Grade
+	if (grade.Rmin <= 0.5*grade.Rmax)
+		grade.Rmin_Grade = GradeSymbol::A;
+	else
+		grade.Rmin_Grade = GradeSymbol::E;
+
+	//SC Grade
+	double SC_rate = grade.SC / grade.Rmax;
+	//cout << "SC_rate:\t" << SC_rate << endl;
+	if (SC_rate >= 0.7) {
+		grade.SC_Grade = GradeSymbol::A;
+	}
+	else if (SC_rate >= 0.55) {
+		grade.SC_Grade = GradeSymbol::B;
+	}
+	else if (SC_rate >= 0.4) {
+		grade.SC_Grade = GradeSymbol::C;
+	}
+	else if (SC_rate >= 0.2) {
+		grade.SC_Grade = GradeSymbol::D;
+	}
+	else {
+		grade.SC_Grade = GradeSymbol::E;
+	}
+
+	//ECmin Grade
+	double ECmin_rate = grade.ECmin / grade.SC*1.0;//
+	//cout << "ECmin_rate:\t" << ECmin_rate << endl;
+	if (ECmin_rate >= 0.15)
+		grade.ECmin_Grade = GradeSymbol::A;
+	else
+		grade.ECmin_Grade = GradeSymbol::E;
+
+	grade.MOD = grade.ECmin*1.0 / grade.SC*1.0;
+	if (grade.MOD >= 0.7) {
+		grade.MOD_Grade = GradeSymbol::A;
+	}
+	else if (grade.MOD >= 0.6) {
+		grade.MOD_Grade = GradeSymbol::B;
+	}
+	else if (grade.MOD >= 0.5) {
+		grade.MOD_Grade = GradeSymbol::C;
+	}
+	else if (grade.MOD >= 0.4) {
+		grade.MOD_Grade = GradeSymbol::D;
+	}
+	else {
+		grade.MOD_Grade = GradeSymbol::E;
+	}
+
+	//ERNmax Grade
+	grade.Defects = grade.ERNmax*1.0 / grade.SC*1.0;
+	if (grade.Defects <= 0.15) {
+		grade.Defects_Grade = GradeSymbol::A;
+	}
+	else if (grade.Defects <= 0.2) {
+		grade.Defects_Grade = GradeSymbol::B;
+	}
+	else if (grade.Defects <= 0.25) {
+		grade.Defects_Grade = GradeSymbol::C;
+	}
+	else if (grade.Defects <= 0.3) {
+		grade.Defects_Grade = GradeSymbol::D;
+	}
+	else {
+		grade.Defects_Grade = GradeSymbol::E;
+	}
+
+	//cout << endl;
+
+	return true;
+}
+
 bool Func(CImg* pImg, Grade &grade) {
 	if (pImg == NULL)
 		return false;
@@ -318,8 +588,19 @@ bool Func(CImg* pImg, Grade &grade) {
 	double GT = 0, SC = 0;//全局阈值
 	Func_GetGT(source, MaxGrayValue, MinGrayValue, SC, GT, topmost, downmost, width, height);
 	//cout << "\nMAX:" << (unsigned int)MaxGrayValue << " MIN:" << (unsigned int)MinGrayValue << " GT:" << GT << endl;
-
-
+	grade.Rmax = MaxGrayValue;
+	grade.Rmin = MinGrayValue;
+	grade.SC = SC;
+	grade.GT = GT;
+	//vector<unsigned char> set;
+	//Func_GetSelectedRowPixels(source, set, topmost, width);
+	//for each (auto var in set) {
+	//	cout << (unsigned int)var << " ";
+	//}
+	if (SC != 0) {
+		Func_Scan(source, GT, topmost, downmost, width, height, grade);
+		Func_Grading(grade);
+	}
 
 	//delete
 	for (unsigned long i = 0; i < height; ++i) {
@@ -334,12 +615,18 @@ bool Func(CImg* pImg, Grade &grade) {
 //-----程序入口-----
 int main() {
 	CImg* pImg = create_image();
-	BOOL rt = pImg->AttachFromFile("..//imgs//barcodes//barcode-test-06.bmp");
+	BOOL rt = pImg->AttachFromFile("..//imgs//barcodes//barcode-test-42.bmp");
 	if (!rt)
 		return -1;
 
 	Grade grade;
 	Func(pImg, grade);
+	cout << "Rmin_G:\t\t" << grade.Rmin_Grade << " Rmin_S:\t" << (unsigned int)grade.Rmin
+		<< "\nSC_G:\t\t" << grade.SC_Grade << " SC_S:\t\t" << grade.SC
+		<< "\nECmin_G:\t" << grade.ECmin_Grade << " ECmin_S:\t" << (unsigned int)grade.ECmin
+		<< "\nMOD_G:\t\t" << grade.MOD_Grade << " MOD_S:\t" << grade.MOD
+		<< "\nDefects_G:\t" << grade.Defects_Grade << " Defects_S:\t" << grade.Defects << endl;
+
 
 	getchar();
 	return 0;
