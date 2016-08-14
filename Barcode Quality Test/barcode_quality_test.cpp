@@ -171,7 +171,7 @@ bool __Func_DrawLine(unsigned char** img, unsigned int topmost, unsigned int dow
 			if (x < width) {
 				for (unsigned long i = xprev; i <= x; ++i) {
 					for (unsigned long y = topmost; y <= downmost; ++y) {
-						preview[y][i] = 0;
+						preview[y][i] = 0x22;
 						_ASSERTE(_CrtCheckMemory());
 					}
 				}
@@ -693,7 +693,7 @@ bool Func(CImg* pImg, Grade &grade) {
 		vector<unsigned long > loc;
 		Func_GetModuleWidth(locDataSet, loc);
 #ifdef _DEBUG
-		__Func_DrawLine(source, topmost, downmost, loc, width, height, 0xFF);
+		//__Func_DrawLine(source, topmost, downmost, loc, width, height, 0xEE);
 #endif
 	}
 
@@ -710,7 +710,7 @@ bool Func(CImg* pImg, Grade &grade) {
 //-----³ÌÐòÈë¿Ú-----
 int main() {
 	CImg* pImg = create_image();
-	BOOL rt = pImg->AttachFromFile("..//imgs//barcodes//barcode-test-13.bmp");
+	BOOL rt = pImg->AttachFromFile("..//imgs//barcodes//barcode-test-36.bmp");
 	if (!rt)
 		return -1;
 
