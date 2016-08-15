@@ -17,6 +17,9 @@
 #pragma  comment(lib, "../Release/hawkvis.lib")
 #endif
 
+#define SOBEL_IMG
+//#define COUT_MAPPING
+
 using namespace std;
 
 //-----枚举-----
@@ -900,91 +903,6 @@ unsigned int _Func_Fpd_TM5_GetHighest_Of_LastColumn(vector<LSAI_SGIT > SGIT) {
 }
 
 //计算SC值
-bool Func_SC(unsigned char* pBuffer, const long width, const long height, double &SC, double &GT, GradeSymbol &Grade) {
-	if (pBuffer == NULL)
-		return false;
-	if (width == 0 || height == 0)
-		return false;
-	unsigned long long tab[256];
-	memset(tab, 0, 256 * sizeof(unsigned long long));
-	for (long i = 0; i < width*height; ++i) {
-		++tab[(unsigned int)pBuffer[i]];
-	}
-
-	unsigned long long limit = 0.1*width*height;
-	unsigned long long count = 0;
-	unsigned long long sum = 0;
-	for (int i = 0; i < 256; ++i) {
-		if (count < limit) {
-			if (tab[i] > 0) {
-				if (count + tab[i] > limit) {
-					unsigned long long temp = limit - count;
-					count += temp;
-					sum += i*temp;
-				}
-				else {
-					count += tab[i];
-					sum += i*tab[i];
-				}
-			}
-			else
-				continue;
-		}
-		else
-			break;
-	}
-	double avglower = (double)sum / count;
-
-	count = 0;
-	sum = 0;
-	for (int i = 255; i >= 0; --i) {
-		if (count < limit) {
-			if (tab[i] > 0) {
-				if (count + tab[i] > limit) {
-					unsigned long long temp = limit - count;
-					count += temp;
-					sum += i*temp;
-				}
-				else {
-					count += tab[i];
-					sum += i*tab[i];
-				}
-			}
-			else
-				continue;
-		}
-		else
-			break;
-	}
-	double avggreater = (double)sum / count;
-
-	SC = avggreater - avglower;
-
-	GT = (avglower + avggreater) / 2;
-
-	double score;
-	score = 1.0 * SC / avggreater;
-
-	if (score >= 0.7) {
-		Grade = GradeSymbol::A;
-	}
-	else if (score >= 0.55) {
-		Grade = GradeSymbol::B;
-	}
-	else if (score >= 0.4) {
-		Grade = GradeSymbol::C;
-	}
-	else if (score >= 0.2) {
-		Grade = GradeSymbol::D;
-	}
-	else {
-		Grade = GradeSymbol::E;
-	}
-
-	return true;
-}
-
-//计算SC值
 bool Func_SC(unsigned char** pBuffer, const long width, const long height, double &SC, double &GT, GradeSymbol &Grade) {
 	if (pBuffer == NULL)
 		return false;
@@ -1052,7 +970,8 @@ bool Func_SC(unsigned char** pBuffer, const long width, const long height, doubl
 	GT = (avglower + avggreater) / 2;
 
 	double score;
-	score = 1.0 * (avggreater - avglower) / avggreater;
+	//score = 1.0 * (avggreater - avglower) / avggreater;
+	score = 1.0 * (avggreater - avglower) / 255.0;
 
 	if (score >= 0.7) {
 		Grade = A;
@@ -1112,13 +1031,43 @@ bool Func_Sobel(unsigned char** img, long** &gx, long** &gy, const long width, c
 bool Func_Gradient(long** gx, long** gy, double** &G, const long width, const long height) {
 	if (gx == NULL || gy == NULL || G == NULL)
 		return false;
+
+#ifdef SOBEL_IMG
+	////
+	unsigned char** preview = new unsigned char*[height];
+	for (unsigned long i = 0; i < height; ++i) {
+		preview[i] = new unsigned char[width];
+	}
+
+#endif
+
 	for (long j = 0; j < height; ++j) {
 		for (long i = 0; i < width; ++i) {
 			long long x = gx[j][i];
 			long long y = gy[j][i];
 			G[j][i] = sqrt((x * x) + (y * y)) > 255 ? 255 : sqrt((x * x) + (y * y));
+#ifdef SOBEL_IMG
+			preview[j][i] = (unsigned char)G[j][i];
+#endif
 		}
 	}
+
+#ifdef SOBEL_IMG
+	////
+	CImg * pPreviewImg = create_image();
+	pPreviewImg->InitArray8(preview, height, width);
+	string filepath = NowTimeToFileName("..//results//dqt//Preview", ".bmp");
+	pPreviewImg->SaveToFile(filepath.c_str());
+
+	////
+	for (unsigned long i = 0; i < height; ++i) {
+		delete[] preview[i];
+	}
+	delete[] preview;
+	preview = NULL;
+
+#endif
+
 	return true;
 }
 
@@ -1265,12 +1214,14 @@ bool Func_GetMaxima(long long* Amx, long long* Amy, vector<long > &Xmaxima, vect
 		return false;
 	for (long y = 2; y < height - 2; ++y) {
 		if (Amx[y] >= Amx[y - 1] && Amx[y - 1] >= Amx[y - 2] && Amx[y] > Amx[y + 1] && Amx[y + 1] >= Amx[y + 2])
+			//if (Amx[y] >= Amx[y - 1] && Amx[y] > Amx[y + 1])
 			Xmaxima.push_back(y);
 	}
 	//Xmaxima.push_back(height - 1);
 
 	for (long x = 2; x < width - 2; ++x) {
 		if (Amy[x] >= Amy[x - 1] && Amy[x - 1] >= Amy[x - 2] && Amy[x] > Amy[x + 1] && Amy[x + 1] >= Amy[x + 2])
+			//if (Amy[x] >= Amy[x - 1] && Amy[x] > Amy[x + 1])
 			Ymaxima.push_back(x);
 	}
 	//Ymaxima.push_back(width - 1);
@@ -1388,7 +1339,7 @@ bool Func_AN(vector<long > Xmaxima, vector<long > Ymaxima, double &score, GradeS
 	double xavg = (*prev(Ymaxima.end()) - *Ymaxima.begin())*1.0 / (Ymaxima.size() - 1);
 	double yavg = (*prev(Xmaxima.end()) - *Xmaxima.begin())*1.0 / (Xmaxima.size() - 1);
 
-	score = abs(xavg - yavg) / ((xavg + yavg)*2.0);
+	score = abs(xavg - yavg)*2.0 / (xavg + yavg);
 
 	if (score > 0.12) {
 		grade = GradeSymbol::E;
@@ -2022,9 +1973,48 @@ bool Func(CImg* pImg, const unsigned int error_correction_capacity, Grade &grade
 	if (rt == false)
 		return false;
 
+#ifdef COUT_MAPPING
+	cout << endl;
+	for (unsigned long x = 0; x < width; ++x) {
+		cout << mappedy[x] << " ";
+	}
+
+	cout << "\n---------------------------------" << endl;
+
+
+	cout << endl;
+	for (unsigned long y = 0; y < height; ++y) {
+		cout << mappedx[y] << " ";
+	}
+	cout << endl;
+
+	cout << "\n++++++++++++++++++++++++++++++++" << endl;
+
+#endif
+
 	const int model[7] = { 5,10,45,50,45,10,5 };
+	//const int model[7] = { 0,0,0,100,0,0,0 };
 	const int M = 100;
 	rt = Func_Gauss(mappedx, mappedy, aftermx, aftermy, width, height, model, M);
+
+#ifdef COUT_MAPPING
+	cout << endl;
+	for (unsigned long x = 0; x < width; ++x) {
+		cout << aftermy[x] << " ";
+	}
+
+	cout << "\n---------------------------------" << endl;
+
+
+	cout << endl;
+	for (unsigned long y = 0; y < height; ++y) {
+		cout << aftermx[y] << " ";
+	}
+	cout << endl;
+
+	cout << "\n++++++++++++++++++++++++++++++++" << endl;
+
+#endif
 
 	if (rt == false)
 		return false;
@@ -2119,7 +2109,8 @@ bool Func(CImg* pImg, const unsigned int error_correction_capacity, Grade &grade
 int main() {
 	CImg* pImg = create_image();
 	//BOOL rt = pImg->AttachFromFile("..//imgs//2-1-0.bmp");
-	BOOL rt = pImg->AttachFromFile("..//imgs//code-test-31.bmp");
+	BOOL rt = pImg->AttachFromFile("..//imgs//TEST02//Grid Nonuniformity_0__0_78_5.bmp");
+	//BOOL rt = pImg->AttachFromFile("..//imgs//DST - 160814_192213_0000.bmp");
 	if (!rt)
 		return -1;
 	Grade Gr;

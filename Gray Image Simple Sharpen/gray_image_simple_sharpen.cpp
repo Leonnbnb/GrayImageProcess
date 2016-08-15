@@ -330,7 +330,8 @@ bool Func(CImg* img) {
 int main() {
 	CImg* pImg = create_image();
 	//BOOL rt = pImg->AttachFromFile("..//imgs//2-1-0.bmp");
-	BOOL rt = pImg->AttachFromFile("..//imgs//code-test-23.bmp");
+	//BOOL rt = pImg->AttachFromFile("..//imgs//code-test-23.bmp");
+	BOOL rt = pImg->AttachFromFile("..//imgs//TEST//origin.bmp");
 	if (!rt)
 		return -1;
 

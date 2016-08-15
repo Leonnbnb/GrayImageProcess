@@ -20,7 +20,6 @@
 using namespace std;
 
 #ifdef _DEBUG
-
 //获取当前的系统时间以创建文件名（仅供调试输出使用）
 string NowTimeToFileName(const string preStr, const string suffixalNameStr) {
 	static string pastTime;
@@ -45,7 +44,6 @@ string NowTimeToFileName(const string preStr, const string suffixalNameStr) {
 	pastTime = nowTime;
 	return fileName;
 }
-
 #endif
 
 //计算GT值
