@@ -1,379 +1,1104 @@
-#include <iostream>
-#include <vector>
-#include <cmath>//abs()
-#include <memory.h>
-#include <windows.h>//BOOL etc.
+#include "class_barcode_grade_NEW.h"
 
-//filename
-#include <ctime>
-#include <sstream>
-#include <iomanip>
+/*****************************************
 
-//CImg
-#include "..//shared//ExtPatternRecognize.h"
-#ifdef _DEBUG
-#pragma  comment(lib, "../Debug/hawkvis_D.lib")
-#else
-#pragma  comment(lib, "../Release/hawkvis.lib")
-#endif
+	Class OneDBarcodeGrading Interface
 
-#define SOBEL_IMG
-//#define COUT_MAPPING
+******************************************/
 
-using namespace std;
+bool OneDBarcodeGrading::Grading(CImg* pImg, OneDBarCodeType type) {
+	if (!pImg)
+		return false;
 
-//-----枚举-----
+	switch (type) {
+	case OneDBarCodeType::EAN_128: {
+		bool rt = EAN128(pImg, OneDBarcodeGrade);
+		InitFlag = true;
+		return rt;
+	}
+	default:
+	{
+		return false;
+	}
+	}
+}
 
-//评级等级符号及其对应分数
-typedef enum GradeSymbol {
-	A = 4,
-	B = 3,
-	C = 2,
-	D = 1,
-	F = 0
-}GradeSymbol;
+bool OneDBarcodeGrading::SetDECODEGrade(int decode_grade) {
+	switch (decode_grade) {
+	case 0:
+		OneDBarcodeGrade.DECODE_Grade = GradeSymbol::F;
+		break;
+	case 4:
+		OneDBarcodeGrade.DECODE_Grade = GradeSymbol::A;
+		break;
+	default:
+		OneDBarcodeGrade.DECODE_Grade = GradeSymbol::F;
+		return false;
+	}
+	return true;
+}
 
-//L形区域的类型(L区域 QZL区域 CTSA区域)
-typedef enum LShapeAreaStyle {
-	L = 0,
-	QZL = 1,
-	CT1 = 2,
-	CT2 = 3,
-	SA = 4
-}LSAS;
+int OneDBarcodeGrading::GetDecodabilityGrade() {
+	if (InitFlag) {
+		return OneDBarcodeGrade.Decodability_Grade;
+	}
+	else
+		return -1;
+}
 
-//-----结构-----
+int OneDBarcodeGrading::GetSCGrade() {
+	if (InitFlag) {
+		return OneDBarcodeGrade.SC_Grade;
+	}
+	else
+		return -1;
+}
 
-//各项等级评分数据以及等级
-typedef struct Grade {
-	GradeSymbol SC;
-	double SC_Score;
-	GradeSymbol MOD;
-	GradeSymbol AN;
-	double AN_Score;
-	GradeSymbol GN;
-	double GN_Score;
-	GradeSymbol FPD;
+int OneDBarcodeGrading::GetMODGrade() {
+	if (InitFlag) {
+		return OneDBarcodeGrade.MOD_Grade;
+	}
+	else
+		return -1;
+}
 
-	Grade() {
-		SC = GradeSymbol::F;		SC_Score = 0;
-		MOD = GradeSymbol::F;
-		AN = GradeSymbol::F;		AN_Score = 0;
-		GN = GradeSymbol::F;		GN_Score = 0;
-		FPD = GradeSymbol::F;
+int OneDBarcodeGrading::GetDefectsGrade() {
+	if (InitFlag) {
+		return OneDBarcodeGrade.Defects_Grade;
+	}
+	else
+		return -1;
+}
+
+int OneDBarcodeGrading::GetRminGrade() {
+	if (InitFlag) {
+		return OneDBarcodeGrade.Rmin_Grade;
+	}
+	else
+		return -1;
+}
+
+int OneDBarcodeGrading::GetECminGrade() {
+	if (InitFlag) {
+		return OneDBarcodeGrade.ECmin_Grade;
+	}
+	else
+		return -1;
+}
+
+int OneDBarcodeGrading::GetDECODEGrade() {
+	if (InitFlag) {
+		return OneDBarcodeGrade.DECODE_Grade;
+	}
+	else
+		return -1;
+}
+
+/*****************************************
+
+	Class OneDBarcodeGrading Private
+				Funtions
+
+******************************************/
+
+bool OneDBarcodeGrading::EAN128(CImg* pImg, OneDBarcodeGrading::Grade &grade) {
+	if (pImg == NULL)
+		return false;
+
+	long width, height;//图片的尺寸
+	width = pImg->GetWidthPixel();
+	height = pImg->GetHeight();
+
+	//new
+	unsigned char** source = new unsigned char*[height];
+	for (unsigned long i = 0; i < height; ++i) {
+		source[i] = new unsigned char[width];
 	}
 
-}Grade;
-
-//L形区域即几个静态区域的单元像素均值以及MOD数据
-typedef struct LShapeAreaInfo {
-	unsigned long leftdistance;
-	unsigned long downdistance;
-	unsigned long topdistance;
-	unsigned long rightdistance;
-	unsigned long L1width;
-	unsigned long CT1height;
-	unsigned long L2height;
-	unsigned long CT2width;
-	vector<double > QZL1AVG;
-	vector<double > L1AVG;
-	vector<double > QZL2AVG;
-	vector<double > L2AVG;
-	vector<double > CT1AVG;
-	vector<double > SA1AVG;
-	vector<double > CT2AVG;
-	vector<double > SA2AVG;
-	vector<double > QZL1MOD;
-	vector<double > L1MOD;
-	vector<double > QZL2MOD;
-	vector<double > L2MOD;
-	vector<double > CT1MOD;
-	vector<double > SA1MOD;
-	vector<double > CT2MOD;
-	vector<double > SA2MOD;
-	LShapeAreaInfo() {
-		leftdistance = 0;
-		downdistance = 0;
-		topdistance = 0;
-		rightdistance = 0;
-		L1width = 0;
-		CT1height = 0;
-		L2height = 0;
-		CT2width = 0;
-		QZL1AVG.clear();
-		L1AVG.clear();
-		QZL2AVG.clear();
-		L2AVG.clear();
-		CT1AVG.clear();
-		SA1AVG.clear();
-		CT2AVG.clear();
-		SA2AVG.clear();
-		QZL1MOD.clear();
-		L1MOD.clear();
-		QZL2MOD.clear();
-		L2MOD.clear();
-		CT1MOD.clear();
-		SA1MOD.clear();
-		CT2MOD.clear();
-		SA2MOD.clear();
-	}
-} LSAI;
-
-//16022 Table M.4(P111)
-typedef struct LShapeAreaInfoMODTable {
-	unsigned int sum;
-	unsigned int numofgradeE;
-	unsigned int numofgradeD;
-	unsigned int numofgradeC;
-	unsigned int numofgradeB;
-	unsigned int numofgradeA;
-	vector<pair<double, GradeSymbol > > modinfo;
-
-	LShapeAreaInfoMODTable() {
-		sum = 0;
-		numofgradeE = 0;
-		numofgradeD = 0;
-		numofgradeC = 0;
-		numofgradeB = 0;
-		numofgradeA = 0;
+	//trans
+	for (long j = 0; j < height; ++j) {
+		for (long i = 0; i < width; ++i) {
+			BYTE* pBuff = pImg->GetPixelAddressRow(j);
+			source[j][i] = pBuff[i];
+		}
 	}
 
-}LSAI_MT;
+	//action
+	vector<long long > MX;//将图像灰度值横向映射累加
+	Func_Mapping(source, MX, width, height);
 
-//16022 Table M.5 L QZL SubTable(P111)
-typedef struct LShapeAreaInfoLQZLTable {
-	double damaged_modules;
-	unsigned int notional_damage_grade;
-	LShapeAreaInfoLQZLTable() {
-		damaged_modules = 0;
-		notional_damage_grade = 0;
-	}
-}LSAI_LQZLT;
+	vector<long long > AMX;//将累加的灰度值进行差分运算
+	long long MaxOfAMX = 0;//AMX中的最大值
+	Func_MappedDifference(MX, AMX, MaxOfAMX);
 
-//16022 Table M.5 CT SA SubTable(P111)
-typedef struct LShapeAreaInfoCTSATable {
-	//NO USE BUT FOR ALIGN
-	double CT_regularity_modules;
-	unsigned int CT_regularity_grade;
-	double CT_damaged_modules;
-	unsigned int CT_damage_grade;
-	double SA_damaged_modules;
-	unsigned int SA_damage_grade;
+	Func_SmoothDifference(AMX, MaxOfAMX, 0.35);
 
-	LShapeAreaInfoCTSATable() {
-		CT_regularity_modules = 0;
-		CT_regularity_grade = 0;
-		CT_damaged_modules = 0;
-		CT_damage_grade = 0;
-		SA_damaged_modules = 0;
-		SA_damage_grade = 0;
-	}
-}LSAI_CTSAT;
+	vector<unsigned int> loc;//波峰的位置
+	Func_FindSurvivingPeak(AMX, loc);
 
-//16022 Table M.5 SubTable Union(P111)
-typedef union LShapeAreaInfoSegmentGradingTable_SubTable {
-	LSAI_LQZLT LQZLT;
-	LSAI_CTSAT CTSAT;
-	LShapeAreaInfoSegmentGradingTable_SubTable() {}
-}LSAI_SGIT_ST;
-
-//16022 Table M.5 MainTable(P111)
-typedef struct LShapeAreaInfoSegmentGradingTable {
-	unsigned int MOD_grade_level;
-	unsigned int no_of_modules;
-	unsigned int cum_no_of_modules;
-	unsigned int remainder_damaged_modules;
-	LSAI_SGIT_ST ST;
-	unsigned int lower_of_grades;
-
-	LShapeAreaInfoSegmentGradingTable() {
-		MOD_grade_level = 0;
-		no_of_modules = 0;
-		cum_no_of_modules = 0;
-		remainder_damaged_modules = 0;
-		lower_of_grades = 0;
+	unsigned int topmost = 0, downmost = height - 1;//条码区域的上下界
+	Func_FindFarmost(loc, topmost, downmost);
+	unsigned char MaxGrayValue = 0, MinGrayValue = 255;//条码区域最大最小灰度值
+	double GT = 0, SC = 0;//全局阈值
+	Func_GetGT(source, MaxGrayValue, MinGrayValue, SC, GT, topmost, downmost, width, height);
+	//将得到的结果存储
+	grade.Rmax = MaxGrayValue;
+	grade.Rmin = MinGrayValue;
+	grade.SC = SC;
+	grade.GT = GT;
+	if (SC != 0) {
+		vector<vector<unsigned long > > locDataSet;
+		vector<vector<float > > locDataSet2;
+		Func_Scan(pImg, source, locDataSet, locDataSet2, GT, topmost, downmost, width, height, grade);
+		Func_Grading(grade);
+		Func_Decodability(locDataSet2, OneDBarCodeType::EAN_128, grade);
 	}
 
-}LSAI_SGIT;
-
-//CTSA Segment Grade
-typedef struct CTSASegmentGrade {
-	unsigned int transition_ratio_test_grade;
-	unsigned int notional_damage_test_grades;
-	CTSASegmentGrade() {
-		transition_ratio_test_grade = 0;
-		notional_damage_test_grades = 0;
+	//delete
+	for (unsigned long i = 0; i < height; ++i) {
+		delete[] source[i];
 	}
-}FPD_CTSASG;
+	delete[] source;
+	source = NULL;
 
-//All FPD Grades
-typedef struct FPDGrades {
-	unsigned int L1_grade;
-	unsigned int L2_grade;
-	unsigned int QZL1_grade;
-	unsigned int QZL2_grade;
-	vector<FPD_CTSASG > CTSA_segs_grades;
-	FPDGrades() {
-		L1_grade = 0;
-		L2_grade = 0;
-		QZL1_grade = 0;
-		QZL2_grade = 0;
+	return true;
+}
 
-		FPD_CTSASG CTSA1;
-		FPD_CTSASG CTSA2;
-		CTSA_segs_grades.push_back(CTSA1);
-		CTSA_segs_grades.push_back(CTSA2);
+void OneDBarcodeGrading::BarcodeCharacterInfo::setValue(float loc1, float loc2, float loc3, float loc4, float loc5, float loc6, float loc7) {
+	p = loc7 - loc1;
+	b1 = loc2 - loc1;
+	b2 = loc4 - loc3;
+	b3 = loc6 - loc5;
+	e1 = loc3 - loc1;
+	e2 = loc4 - loc2;
+	e3 = loc5 - loc3;
+	e4 = loc6 - loc4;
+	p = abs(p);
+	b1 = abs(b1);
+	b2 = abs(b2);
+	b3 = abs(b3);
+	e1 = abs(e1);
+	e2 = abs(e2);
+	e3 = abs(e3);
+	e4 = abs(e4);
+	_setRT();
+
+}
+
+double OneDBarcodeGrading::BarcodeCharacterInfo::calcV1() {
+	double E1V1T[7];
+	double E2V1T[7];
+	double E3V1T[7];
+	double E4V1T[7];
+	double p22 = p*1.0 / 22.0;
+	double min1 = FP_INFINITE, min2 = FP_INFINITE, min3 = FP_INFINITE, min4 = FP_INFINITE;
+	for (unsigned int i = 0; i < 7; ++i) {
+		E1V1T[i] = abs(e1 - RT[i])*1.0 / p22;
+		if (E1V1T[i] <= min1) {
+			min1 = E1V1T[i];
+		}
+		E2V1T[i] = abs(e2 - RT[i])*1.0 / p22;
+		if (E2V1T[i] <= min2) {
+			min2 = E2V1T[i];
+		}
+		E3V1T[i] = abs(e3 - RT[i])*1.0 / p22;
+		if (E3V1T[i] <= min3) {
+			min3 = E3V1T[i];
+		}
+		E4V1T[i] = abs(e4 - RT[i])*1.0 / p22;
+		if (E4V1T[i] <= min4) {
+			min4 = E4V1T[i];
+		}
 	}
 
-}FPD_G;
+	double ret;
+	if (min1 < min2)
+		ret = min1;
+	else
+		ret = min2;
+	if (ret > min3)
+		ret = min3;
+	if (ret > min4)
+		ret = min4;
+	return ret;
+}
 
-//Data Area Modulations MOD info and Grade
-typedef struct DataAreaMODInfoTable {
-	unsigned int sum;
-	unsigned int numofgradeE;
-	unsigned int numofgradeD;
-	unsigned int numofgradeC;
-	unsigned int numofgradeB;
-	unsigned int numofgradeA;
-	vector<pair<double, GradeSymbol > > modinfo;
+bool OneDBarcodeGrading::BarcodeCharacterInfo::_setRT() {
+	if (p == 0) return false;
+	RT[0] = (1.5*p) / 11.0;
+	RT[1] = (2.5*p) / 11.0;
+	RT[2] = (3.5*p) / 11.0;
+	RT[3] = (4.5*p) / 11.0;
+	RT[4] = (5.5*p) / 11.0;
+	RT[5] = (6.5*p) / 11.0;
+	RT[6] = (7.5*p) / 11.0;
+}
 
-	DataAreaMODInfoTable() {
-		sum = 0;
-		numofgradeE = 0;
-		numofgradeD = 0;
-		numofgradeC = 0;
-		numofgradeB = 0;
-		numofgradeA = 0;
+OneDBarcodeGrading::OneDBarcodeGrading() {
+	InitFlag = false;
+}
+
+OneDBarcodeGrading::~OneDBarcodeGrading() {
+
+}
+
+//将图片沿X方向映射，累加灰度值
+bool OneDBarcodeGrading::Func_Mapping(unsigned char** img, vector<long long > &MX, const long width, const long height) {
+	if (img == NULL) return false;
+	if (width == 0 || height == 0)	return true;
+	for (long j = 0; j < height; ++j) {
+		long long sum = 0;
+		for (long i = 0; i < width; ++i) {
+			sum += img[j][i];
+		}
+		MX.push_back(sum);
+	}
+	return true;
+}
+
+//将映射后的信号差分
+bool OneDBarcodeGrading::Func_MappedDifference(vector<long long > MX, vector<long long > &AMX, long long &MaxOfAMX) {
+	if (MX.size() <= 1) return false;
+	long long prev = *MX.begin();
+	long long max = 0;
+	for (vector<long long >::iterator p = MX.begin(); p != MX.end(); ++p) {
+		if (p == MX.begin())
+			continue;
+		AMX.push_back(abs(*p - prev));
+		if (abs(*p - prev) > max)
+			max = abs(*p - prev);
+		prev = *p;
+	}
+	MaxOfAMX = max;
+
+	return true;
+}
+
+//将小峰抹平
+bool OneDBarcodeGrading::Func_SmoothDifference(vector<long long > &AMX, const long long MaxOfAMX, const float M) {
+	if (AMX.size() <= 1 || MaxOfAMX == 0 || M == 0)	return false;
+	//低于门限值的数据以-1填充，方便后面的找波峰的操作
+	for (vector<long long>::iterator p = AMX.begin(); p < AMX.end(); ++p) {
+		if (*p < (MaxOfAMX*M)) {
+			*p = -1;
+		}
+	}
+	if (*AMX.begin() < 0)
+		*AMX.begin() = 1;
+	return true;
+}
+
+//找到仍然存在的波峰
+bool OneDBarcodeGrading::Func_FindSurvivingPeak(vector<long long > &AMX, vector<unsigned int > &loc) {
+	if (AMX.size() <= 1) return false;
+
+	//防止条码没有上边界
+	if (*AMX.begin() > *(AMX.begin() + 1))
+		loc.push_back(0);
+
+	for (vector<long long>::iterator p = AMX.begin() + 1; p < AMX.end() - 1; ++p) {
+		if (*p > 0 && *p >= *(p - 1) && *p >= *(p + 1)) {
+			loc.push_back((unsigned int)(p - AMX.begin()));
+		}
+	}
+	//防止条码没有下边界
+	loc.push_back((unsigned int)((AMX.end() - 1) - AMX.begin()));
+	return true;
+}
+
+//找到距离最远的两个峰顶
+bool OneDBarcodeGrading::Func_FindFarmost(vector<unsigned int > loc, unsigned int &left, unsigned int &right) {
+	if (loc.size() <= 1) return false;
+	unsigned int distance = 0;
+	for (vector<unsigned int >::iterator p = loc.begin() + 1; p < loc.end(); ++p) {
+		//两峰之间的距离
+		if (*p - *(p - 1) > distance) {
+			left = *(p - 1) + 5;
+			right = *p - 5;
+			distance = *p - *(p - 1);
+		}
+	}
+	return true;
+}
+
+//得到灰度最大值最小值以及求得GT 
+bool OneDBarcodeGrading::Func_GetGT(unsigned char** img, unsigned char &maxgray, unsigned char &mingray, double &SC, double &GT, const unsigned int topmost, const unsigned int downmost, const long width, const long height) {
+	if (img == NULL || width == 0 || height == 0 || topmost<0 || downmost>height) return false;
+
+	//指定区域的灰度直方图
+	unsigned long long tab[256];
+	memset(tab, 0, 256 * sizeof(unsigned long long));
+
+	//指定区域像素个数
+	long long pixels = 0;
+	//使用指定区域初始化直方图
+	for (long i = topmost; i < downmost; ++i) {
+		for (long j = 0; j < width; ++j) {
+			++tab[(unsigned int)img[i][j]];
+			++pixels;
+		}
 	}
 
-}MOD_DAMIT;
+	//前百分之十的像素
+	unsigned long long limit = 0.1*pixels;
 
-//15415 Table 7(A) (P19)
-typedef struct ModulationGradingTable {
-	//a
-	unsigned int MOD_codeword_grade_level;
-	unsigned int No_of_codewords_at_level_a;
-	//b
-	unsigned int cumulative_no_of_codewords_at_level_a_or_higher;
-	//sum-b
-	//c
-	unsigned int remaining_codewords;
-	int notional_unused_error_correction_capacity;
-	double notional_UEC;
-	//d
-	unsigned int notional_UEC_grade;
-	//e
-	unsigned int lower_of_a_or_d;
-}MOD_GIT;
+	unsigned long long count = 0;
+	unsigned long long sum = 0;
 
+	for (int i = 0; i < 256; ++i) {
+		if (count < limit) {
+			if (tab[i] > 0) {
+				if (count + tab[i] > limit) {
+					unsigned long long temp = limit - count;
+					count += temp;
+					sum += i*temp;
+				}
+				else {
+					count += tab[i];
+					sum += i*tab[i];
+				}
+			}
+			else
+				continue;
+		}
+		else
+			break;
+	}
+	//前百分之十的最小灰度值的像素均值
+	double avglower = (double)sum / count;
 
-//-----实现函数-----
-#ifdef _DEBUG
+	count = 0;
+	sum = 0;
+	for (int i = 255; i >= 0; --i) {
+		if (count < limit) {
+			if (tab[i] > 0) {
+				if (count + tab[i] > limit) {
+					unsigned long long temp = limit - count;
+					count += temp;
+					sum += i*temp;
+				}
+				else {
+					count += tab[i];
+					sum += i*tab[i];
+				}
+			}
+			else
+				continue;
+		}
+		else
+			break;
+	}
+	//前百分之十的最大灰度值的像素均值
+	double avggreater = (double)sum / count;
 
-//获取当前的系统时间以创建文件名（仅供调试输出使用）
-string NowTimeToFileName(const string preStr, const string suffixalNameStr) {
-	static string pastTime;
-	time_t t = time(NULL);
-	tm tm = *localtime(&t);
-	string nowTime;
-	stringstream os;
-	os.clear();
-	os << put_time(&tm, "%y%m%d_%H%M%S");
-	nowTime = os.str();
-	string fileName;
-	static short k = 0;
-	if (nowTime != pastTime && (!nowTime.empty())) {//因为获取时间只精确到秒，但是程序可以在一秒之内创建数百个文件，所以要对文件名进行区分
-		fileName = preStr + " - " + nowTime + "_0000" + suffixalNameStr;
-		k = 0;
+	SC = avggreater - avglower;
+	GT = (avglower + avggreater) / 2;
+	maxgray = avggreater;
+	mingray = avglower;
+
+	return true;
+}
+
+//获得指定行号的像素值
+bool OneDBarcodeGrading::_Func_GetSelectedRowPixels(unsigned char** img, vector<unsigned char> &rowSet, const unsigned char rowNum, const long width) {
+	if (img == NULL) return false;
+	if (width == 0)	return false;
+	for (unsigned long x = 0; x < width; ++x) {
+		rowSet.push_back(img[rowNum][x]);
+	}
+	return true;
+}
+
+//将分割线经过的一维信号以GT为界限划分
+bool OneDBarcodeGrading::_Func_Split(vector<unsigned char > &rowSet, vector<unsigned long > &locSet, double GT, vector<vector<unsigned char > > &sets) {
+	if (rowSet.size() == 0)	return false;
+	unsigned long loc = 0;
+	//掐头:)
+	if (*rowSet.begin() >= GT) {
+		vector<unsigned char >::iterator pfront = rowSet.begin();
+		while (pfront < rowSet.end() && *pfront >= GT)
+			++pfront;
+		loc = pfront - rowSet.begin();
+		rowSet.erase(rowSet.begin(), pfront);
+	}
+	locSet.push_back(loc);
+
+	//如果为纯色图片，上一步操作会将所有元素清除
+	if (rowSet.size() == 0)
+		return false;
+	//去尾:)
+	if (*prev(rowSet.end()) >= GT) {
+		vector<unsigned char >::iterator prear = prev(rowSet.end());
+		while (prear > rowSet.begin() && *prear > GT)
+			--prear;
+		rowSet.erase(prear, rowSet.end());
+	}
+	//For safe
+	if (rowSet.size() == 0)
+		return false;
+	//切割成段
+	vector<unsigned char >::iterator p = rowSet.begin();
+	vector<unsigned char > up, down;
+
+	while (p < rowSet.end()) {
+		if (p >= rowSet.end())
+			break;
+		//条区域（黑色）
+		while (p < rowSet.end() && *p <= GT) {
+			down.push_back(*p);
+			++loc;
+			if (p < rowSet.end())
+				++p;
+			else
+				break;
+		}
+		if (down.size() != 0) {
+			sets.push_back(down);
+			locSet.push_back(loc);
+			down.clear();
+		}
+		//空白区域（白色）
+		while (p < rowSet.end() && *p > GT) {
+			up.push_back(*p);
+			++loc;
+			if (p < rowSet.end())
+				++p;
+			else
+				break;
+		}
+		if (up.size() != 0) {
+			sets.push_back(up);
+			locSet.push_back(loc);
+			up.clear();
+		}
+	}
+}
+
+//根据分段后的数据获得最小EC值和最大ERN值
+bool OneDBarcodeGrading::_Func_ECminERNmax(vector<vector<vector<unsigned char > > > dataSet, double GT, OneDBarcodeGrading::Grade &grade) {
+	if (dataSet.size() == 0) return false;
+	unsigned char ECmin = 255, ERNmax = 0;
+	//pair第一个元素是最小值，第二个元素是最大值
+	for each(auto rowdata in dataSet) {
+		//每一条扫描线上的每一段中的最小最大灰度值的集合
+		vector<pair<unsigned char, unsigned char > > minmaxSet;
+		vector<vector<unsigned char > > peakAndvalley;
+		for each(auto seg in rowdata) {
+			unsigned char max = 0, min = 255;
+			bool flagMIN = false, flagMAX = false;
+			vector<unsigned char > segPeakAndvalley;
+			for (vector<unsigned char >::iterator ppix = seg.begin() + 1; ppix < seg.end() - 1; ++ppix) {
+				if (*ppix >= *(ppix + 1) && *ppix >= *(ppix - 1) && *ppix > max) {
+					max = *ppix;
+					flagMAX = true;
+					segPeakAndvalley.push_back(*ppix);
+				}
+				if (*ppix <= *(ppix + 1) && *ppix <= *(ppix - 1) && *ppix < min) {
+					min = *ppix;
+					flagMIN = true;
+					segPeakAndvalley.push_back(*ppix);
+				}
+			}
+			peakAndvalley.push_back(segPeakAndvalley);
+
+			if (flagMAX&&flagMIN) {
+				//段上的最小最大灰度值
+				pair<unsigned char, unsigned char > minmaxofSeg;
+				minmaxofSeg.first = min;
+				minmaxofSeg.second = max;
+				minmaxSet.push_back(minmaxofSeg);
+			}
+			else {
+				if (flagMAX) {
+					pair<unsigned char, unsigned char > minmaxofSeg;
+					minmaxofSeg.first = max;
+					minmaxofSeg.second = max;
+					minmaxSet.push_back(minmaxofSeg);
+				}
+				else if (flagMIN) {
+					pair<unsigned char, unsigned char > minmaxofSeg;
+					minmaxofSeg.first = min;
+					minmaxofSeg.second = min;
+					minmaxSet.push_back(minmaxofSeg);
+				}
+			}
+		}
+		//记录下每条扫描线上的EC
+		vector<unsigned char > ECset;
+
+		if (peakAndvalley.size() != 0) {
+			for (vector<vector<unsigned char > >::iterator p = peakAndvalley.begin() + 1; p < peakAndvalley.end(); ++p) {
+				if (p->size() == 0) {
+					ECset.push_back(abs(*((p - 1)->end() - 1) - GT));
+					++p;
+					ECset.push_back(abs(GT - *(p->begin())));
+				}
+				else {
+					ECset.push_back(abs(*((p - 1)->end() - 1) - *(p->begin())));
+				}
+			}
+		}
+
+		//记录下每条扫描线上的ERN
+		vector<unsigned char > ERNset;
+		if (minmaxSet.size() <= 1)
+			break;
+		ERNset.push_back(abs(minmaxSet.begin()->second - minmaxSet.begin()->first));
+		for (auto p = minmaxSet.begin() + 1; p < minmaxSet.end(); ++p) {
+			unsigned char EC;
+			unsigned char ERN;
+
+			//将每一个SEGMENT中的最大最小值的差值记录下来
+			ERNset.push_back(abs(p->second - p->first));
+		}
+		//找到ECset和ERNset中的EC最小值和ERN最大值
+		for each(auto var in ECset) {
+			if (var <= ECmin) {
+				ECmin = var;
+			}
+		}
+		for each(auto var in ERNset) {
+			if (var >= ERNmax) {
+				ERNmax = var;
+			}
+		}
+	}
+	grade.ERNmax = ERNmax;
+	grade.ECmin = ECmin;
+	return true;
+}
+
+//根据topmost和downmost两条界限确定的条码范围，进行分割，建立多条扫描线进行横向扫描
+bool OneDBarcodeGrading::Func_Scan(const CImg* pImg, unsigned char** img, vector<vector<unsigned long > > &locDataSet, vector<vector<float > > &locDataSet2, double GT, const unsigned int topmost, const unsigned int downmost, const long width, const long height, OneDBarcodeGrading::Grade &grade) {
+	if (img == NULL) return false;
+	if (width == 0 || height == 0) return false;
+	if (topmost<0 || downmost>height) return false;
+	//所有扫描线的像素数据集合
+	vector<vector<vector<unsigned char > > > pixDataSet;
+	//扫描线之间的距离
+	double distance = (downmost - topmost)*1.0 / 10.0;
+	for (long y = topmost; y <= downmost; y += distance) {
+		//指定扫描线的像素灰度值
+		vector<unsigned char> rowPixels;
+		_Func_GetSelectedRowPixels(img, rowPixels, y, width);
+		//将当前扫描线的像素灰度值分段
+		vector<vector<unsigned char > > peakAndvalley;
+		vector<unsigned long > locSet;
+		_Func_Split(rowPixels, locSet, GT, peakAndvalley);
+		pixDataSet.push_back(peakAndvalley);
+		locDataSet.push_back(locSet);
+		//
+		vector<float > locSet2;
+		int count = 0;
+		float* pxset = NULL;
+		float* pyset = NULL;
+		float* pamplitude = NULL;
+		float* pdistance = NULL;
+		bool rt = false;
+		rt = measure1(*pImg, 1.0, 10, 0, y, width - 1, y + 1, 1, measure_Transition::t_all, measure_interpolation::nearest_neighbor, count, pxset, pyset, pamplitude, pdistance);
+		if (rt) {
+			for (int i = 0; i < count; ++i) {
+				locSet2.push_back(pxset[i]);
+			}
+			locDataSet2.push_back(locSet2);
+			if (pxset)
+				delete pxset;
+			if (pyset)
+				delete pyset;
+			if (pamplitude)
+				delete pamplitude;
+			if (pdistance)
+				delete pdistance;
+		}
+	}
+	_Func_ECminERNmax(pixDataSet, GT, grade);
+	grade.MOD = grade.ECmin*1.0 / grade.SC*1.0;
+	return true;
+}
+
+//根据各项数据评级
+bool OneDBarcodeGrading::Func_Grading(OneDBarcodeGrading::Grade &grade) {
+	//Rmin Grade
+	if (grade.Rmin <= 0.5*grade.Rmax)
+		grade.Rmin_Grade = GradeSymbol::A;
+	else
+		grade.Rmin_Grade = GradeSymbol::F;
+
+	//SC Grade
+	double SC_rate = grade.SC / 255.0;
+	if (SC_rate >= 0.7) {
+		grade.SC_Grade = GradeSymbol::A;
+	}
+	else if (SC_rate >= 0.55) {
+		grade.SC_Grade = GradeSymbol::B;
+	}
+	else if (SC_rate >= 0.4) {
+		grade.SC_Grade = GradeSymbol::C;
+	}
+	else if (SC_rate >= 0.2) {
+		grade.SC_Grade = GradeSymbol::D;
 	}
 	else {
-		char extra[5];
-		sprintf_s(extra, sizeof(extra), "%04d", ++k);//
-		fileName = preStr + " - " + nowTime + "_" + extra + suffixalNameStr;
+		grade.SC_Grade = GradeSymbol::F;
 	}
-	pastTime = nowTime;
-	return fileName;
+
+	//ECmin Grade
+	double ECmin_rate = grade.ECmin*1.0 / 255.0/*grade.SC*1.0*/;//
+	if (ECmin_rate >= 0.15)
+		grade.ECmin_Grade = GradeSymbol::A;
+	else
+		grade.ECmin_Grade = GradeSymbol::F;
+
+	//MOD Grade
+	grade.MOD = grade.ECmin*1.0 / grade.SC*1.0;
+	if (grade.MOD >= 0.7) {
+		grade.MOD_Grade = GradeSymbol::A;
+	}
+	else if (grade.MOD >= 0.6) {
+		grade.MOD_Grade = GradeSymbol::B;
+	}
+	else if (grade.MOD >= 0.5) {
+		grade.MOD_Grade = GradeSymbol::C;
+	}
+	else if (grade.MOD >= 0.4) {
+		grade.MOD_Grade = GradeSymbol::D;
+	}
+	else {
+		grade.MOD_Grade = GradeSymbol::F;
+	}
+
+	//ERNmax Grade
+	grade.Defects = grade.ERNmax*1.0 / grade.SC*1.0;
+	if (grade.Defects <= 0.15) {
+		grade.Defects_Grade = GradeSymbol::A;
+	}
+	else if (grade.Defects <= 0.2) {
+		grade.Defects_Grade = GradeSymbol::B;
+	}
+	else if (grade.Defects <= 0.25) {
+		grade.Defects_Grade = GradeSymbol::C;
+	}
+	else if (grade.Defects <= 0.3) {
+		grade.Defects_Grade = GradeSymbol::D;
+	}
+	else {
+		grade.Defects_Grade = GradeSymbol::F;
+	}
+
+	return true;
 }
 
-//根据得到的波峰点位绘制网格（仅供调试输出中间结果）
-bool __Func_DrawLine(unsigned char** img, vector<long > Xmaxima, vector<long > Ymaxima, const long width, const long height, const unsigned char color) {
-	if (img == NULL || Xmaxima.size() == 0 || Ymaxima.size() == 0)
+//EAN128
+bool OneDBarcodeGrading::_Func_Decode_EAN128(vector<vector<float > > locDataSet, OneDBarcodeGrading::Grade &grade) {
+	if (locDataSet.size() == 0) return false;
+	unsigned int lineNum = locDataSet.size();
+	vector<double > rowScoreSet(lineNum);
+	vector<vector<BChInfo > > characterInfoSet(lineNum);
+	for (unsigned int ln = 0; ln < lineNum; ++ln) {
+		if (locDataSet.at(ln).size() % 6 != 2) {
+			rowScoreSet.at(ln) = 0;
+			continue;
+		}
+		else {
+			vector<double > row;
+			for (vector<float >::iterator p = locDataSet.at(ln).begin(); p < locDataSet.at(ln).end(); p += 6) {
+
+				if (p < locDataSet.at(ln).end() - 6) {
+					BChInfo ChI;
+					ChI.setValue(*p, *(p + 1), *(p + 2), *(p + 3), *(p + 4), *(p + 5), *(p + 6));
+					characterInfoSet.at(ln).push_back(ChI);
+					row.push_back(ChI.calcV1());
+				}
+				else {
+					//rowScoreSet.at(ln) = 0;
+					break;
+				}
+
+			}
+
+			if (locDataSet.at(ln).end() - 7 > locDataSet.at(ln).begin()) {
+				BChInfo ChI;
+				ChI.setValue(*(locDataSet.at(ln).end() - 1),
+					*(locDataSet.at(ln).end() - 2),
+					*(locDataSet.at(ln).end() - 3),
+					*(locDataSet.at(ln).end() - 4),
+					*(locDataSet.at(ln).end() - 5),
+					*(locDataSet.at(ln).end() - 6),
+					*(locDataSet.at(ln).end() - 7));
+				characterInfoSet.at(ln).push_back(ChI);
+				double v1 = ChI.calcV1();
+				//double v2 = ChI.calcV2();
+				if (rowScoreSet.at(ln) >= v1)
+					rowScoreSet.at(ln) = v1;
+			}
+			else {
+				rowScoreSet.at(ln) = 0;
+			}
+
+
+			double min = FP_INFINITE;
+			for each(auto var in row) {
+				if (var <= min)
+					min = var;
+			}
+
+			rowScoreSet.at(ln) = min;
+		}
+	}
+
+	double min = FP_INFINITE;
+	for each(auto var in rowScoreSet) {
+		if (var <= min)
+			min = var;
+	}
+	grade.Decodability = min;
+	if (grade.Decodability < 0.25) {
+		grade.Decodability_Grade = GradeSymbol::F;
+	}
+	else if (grade.Decodability < 0.37) {
+		grade.Decodability_Grade = GradeSymbol::D;
+	}
+	else if (grade.Decodability < 0.50) {
+		grade.Decodability_Grade = GradeSymbol::C;
+	}
+	else if (grade.Decodability < 0.62) {
+		grade.Decodability_Grade = GradeSymbol::B;
+	}
+	else {
+		grade.Decodability_Grade = GradeSymbol::A;
+	}
+
+	return true;
+}
+
+//计算可译码度
+bool OneDBarcodeGrading::Func_Decodability(vector<vector<float > > locDataSet, OneDBarCodeType type, OneDBarcodeGrading::Grade &grade) {
+	if (locDataSet.size() == 0) return false;
+	switch (type) {
+	case OneDBarCodeType::EAN_8: {
+		break;
+	}
+	case OneDBarCodeType::EAN_13: {
+		break;
+	}
+	case OneDBarCodeType::EAN_128: {
+		_Func_Decode_EAN128(locDataSet, grade);
+		break;
+	}
+	case OneDBarCodeType::UPC_A: {
+		break;
+	}
+	case OneDBarCodeType::UPC_E: {
+		break;
+	}
+	case OneDBarCodeType::ITF_14: {
+		break;
+	}
+	default:
 		return false;
-	unsigned char** preview = new unsigned char*[height];
-	for (unsigned long i = 0; i < height; ++i) {
-		preview[i] = new unsigned char[width];
+	}
+}
+
+//---------------------------------------------------------------------------//
+
+/*****************************************
+
+	Class TwoDBarcodeGrading Interface
+
+******************************************/
+
+TwoDBarcodeGrading::TwoDBarcodeGrading() {
+	InitFlag = false;
+}
+
+TwoDBarcodeGrading::~TwoDBarcodeGrading() {
+
+}
+
+bool TwoDBarcodeGrading::Func(CImg* pImg, const unsigned int error_correction_capacity, TwoDBarCodeType type) {
+	if (!pImg) return false;
+	if (error_correction_capacity == 0) return false;
+
+	switch (type) {
+	case TwoDBarCodeType::DataMatrix: {
+		bool rt = DataMatrixGrading(pImg, error_correction_capacity, TwoDBarcodeGrade);
+		InitFlag = true;
+		return rt;
+	}
+	default:
+	{
+		return false;
+	}
+	}
+}
+
+bool TwoDBarcodeGrading::SetUECScore(int t, int error_correction_capacity) {
+	double score = 1.0 - (t*2.0 / error_correction_capacity*1.0);
+	if (score < 0) return false;
+	TwoDBarcodeGrade.UEC_Score = score;
+	if (score >= 0.62) {
+		TwoDBarcodeGrade.UEC = GradeSymbol::A;
+	}
+	else if (score >= 0.5) {
+		TwoDBarcodeGrade.UEC = GradeSymbol::B;
+	}
+	else if (score >= 0.37) {
+		TwoDBarcodeGrade.UEC = GradeSymbol::C;
+	}
+	else if (score >= 0.25) {
+		TwoDBarcodeGrade.UEC = GradeSymbol::D;
+	}
+	else {
+		TwoDBarcodeGrade.UEC = GradeSymbol::F;
 	}
 
+	return true;
+}
+
+bool TwoDBarcodeGrading::SetDECODEGrade(int decode_grade) {
+	switch (decode_grade) {
+	case 0:
+		TwoDBarcodeGrade.DECODE = GradeSymbol::F;
+		break;
+	case 1:
+		TwoDBarcodeGrade.DECODE = GradeSymbol::D;
+		break;
+	case 2:
+		TwoDBarcodeGrade.DECODE = GradeSymbol::C;
+		break;
+	case 3:
+		TwoDBarcodeGrade.DECODE = GradeSymbol::B;
+		break;
+	case 4:
+		TwoDBarcodeGrade.DECODE = GradeSymbol::A;
+		break;
+	default:
+		return false;
+	}
+	return true;
+}
+
+int TwoDBarcodeGrading::GetSCGrade() {
+	if (InitFlag)
+		return TwoDBarcodeGrade.SC;
+	else
+		return -1;
+}
+
+int TwoDBarcodeGrading::GetANGrade() {
+	if (InitFlag)
+		return TwoDBarcodeGrade.AN;
+	else
+		return -1;
+}
+
+int TwoDBarcodeGrading::GetGNGrade() {
+	if (InitFlag)
+		return TwoDBarcodeGrade.GN;
+	else
+		return -1;
+}
+
+int TwoDBarcodeGrading::GetFPDGrade() {
+	if (InitFlag)
+		return TwoDBarcodeGrade.FPD;
+	else
+		return -1;
+}
+
+int TwoDBarcodeGrading::GetMODGrade() {
+	if (InitFlag)
+		return TwoDBarcodeGrade.MOD;
+	else
+		return -1;
+}
+
+int TwoDBarcodeGrading::GetUECGrade() {
+	if (InitFlag)
+		return TwoDBarcodeGrade.UEC;
+	else
+		return -1;
+}
+
+int TwoDBarcodeGrading::GetDECODEGrade() {
+	if (InitFlag)
+		return TwoDBarcodeGrade.DECODE;
+	else
+		return -1;
+}
+
+/*****************************************
+
+	Class TwoDBarcodeGrading Private
+				Funtions
+
+******************************************/
+
+//DataMatrix 评级
+bool TwoDBarcodeGrading::DataMatrixGrading(CImg* pImg, const unsigned int error_correction_capacity, TwoDBarcodeGrading::Grade &grade) {
+	if (pImg == NULL)
+		return false;
+	if (error_correction_capacity == 0)
+		return false;
+
+	long width;
+	long height;
+
+	width = pImg->GetWidthPixel();
+	height = pImg->GetHeight();
+
+	//new
+	unsigned char** source = new unsigned char*[height];
 	for (unsigned long i = 0; i < height; ++i) {
-		memcpy(preview[i], img[i], width * sizeof(unsigned char));
+		source[i] = new unsigned char[width];
 	}
 
-	for each(long y in Xmaxima) {
+	long** gx = new long*[height];
+	for (unsigned long i = 0; i < height; ++i) {
+		gx[i] = new long[width];
+	}
+
+	long** gy = new long*[height];
+	for (unsigned long i = 0; i < height; ++i) {
+		gy[i] = new long[width];
+	}
+
+	double** gradient = new double*[height];
+	for (unsigned long i = 0; i < height; ++i) {
+		gradient[i] = new double[width];
+	}
+
+	long long *mappedx = new long long[height];
+	long long *mappedy = new long long[width];
+	memset(mappedx, 0, sizeof(long long)*height);
+	memset(mappedy, 0, sizeof(long long)*width);
+
+	long long *aftermx = new long long[height];
+	long long *aftermy = new long long[width];
+	memset(aftermx, 0, sizeof(long long)*height);
+	memset(aftermy, 0, sizeof(long long)*width);
+
+	long long *remx = new long long[height];
+	long long *remy = new long long[width];
+	memset(remx, 0, sizeof(long long)*height);
+	memset(remy, 0, sizeof(long long)*width);
+
+	//trans
+	for (long j = 0; j < height; ++j) {
 		for (long i = 0; i < width; ++i) {
-			preview[y][i] = (unsigned char)color;
+			BYTE* pBuff = pImg->GetPixelAddressRow(j);
+			source[j][i] = pBuff[i];
 		}
 	}
 
-	for each(long x in Ymaxima) {
-		for (long j = 0; j < height; ++j) {
-			preview[j][x] = (unsigned char)color;
-		}
+	//action
+	double GT;
+
+	bool rt = true;
+	rt = Func_SC(source, width, height, grade.SC_Score, GT, grade.SC);
+	if (rt == false)
+		return false;
+
+	rt = Func_Sobel(source, gx, gy, width, height);
+	if (rt == false)
+		return false;
+
+	rt = Func_Gradient(gx, gy, gradient, width, height);
+	if (rt == false)
+		return false;
+
+	rt = Func_Mapping(gradient, mappedx, mappedy, width, height);
+	if (rt == false)
+		return false;
+
+	const int model[7] = { 5,10,45,50,45,10,5 };
+	const int M = 100;
+	rt = Func_Gauss(mappedx, mappedy, aftermx, aftermy, width, height, model, M);
+
+	if (rt == false)
+		return false;
+	vector<long > Xmaxima, Ymaxima;
+	rt = Func_GetMaxima(aftermx, aftermy, Xmaxima, Ymaxima, width, height);
+	if (rt == false)
+		return false;
+	rt = Func_CompareHill(aftermx, aftermy, Xmaxima, Ymaxima, width, height);
+	if (rt == false)
+		return false;
+
+	vector<vector<unsigned char > > avr;
+	rt = Func_ModuleAvg(source, Xmaxima, Ymaxima, avr, width, height);
+	if (rt == false)
+		return false;
+
+	MOD_DAMIT DataAreaMODInfo;
+	vector<MOD_GIT> MODGradingTable;
+	rt = Func_MOD_DataAreaModulation(avr, DataAreaMODInfo, GT, grade.SC_Score);
+	if (rt != false) {
+		grade.MOD = _Func_MOD_T7A(DataAreaMODInfo, MODGradingTable, error_correction_capacity);
 	}
-	CImg * pPreviewImg = create_image();
-	pPreviewImg->InitArray8(preview, height, width);
-	string filepath = NowTimeToFileName("..//results//dqt//DrawLine", ".bmp");
-	pPreviewImg->SaveToFile(filepath.c_str());
+	else {
+		grade.MOD = GradeSymbol::F;
+	}
+
+	rt = Func_AN(Xmaxima, Ymaxima, grade.AN_Score, grade.AN);
+	if (rt == false)
+		return false;
+
+	rt = Func_GN(Xmaxima, Ymaxima, grade.GN_Score, grade.GN);
+	if (rt == false)
+		return false;
+
+	FPD_G FPD_Grades;
+	rt = Func_FPD(source, FPD_Grades, Xmaxima, Ymaxima, grade.SC_Score, GT, width, height);
+	if (rt == false)
+		return false;
+
+	Func_CalculatePFDAverageGrade(FPD_Grades, grade);
+
+
+	//delete
+	delete mappedx;
+	mappedx = NULL;
+	delete mappedy;
+	mappedy = NULL;
+	delete aftermx;
+	aftermx = NULL;
+	delete aftermy;
+	aftermy = NULL;
+
 
 	for (unsigned long i = 0; i < height; ++i) {
-		delete[] preview[i];
+		delete[] source[i];
 	}
-	delete[] preview;
-	preview = NULL;
+	delete[] source;
+	source = NULL;
+
+	for (unsigned long i = 0; i < height; ++i) {
+		delete[] gx[i];
+	}
+	delete[] gx;
+	gx = NULL;
+
+	for (unsigned long i = 0; i < height; ++i) {
+		delete[] gy[i];
+	}
+	delete[] gy;
+	gy = NULL;
+
+	for (unsigned long i = 0; i < height; ++i) {
+		delete[] gradient[i];
+	}
+	delete[] gradient;
+	gradient = NULL;
+
 
 	return true;
 }
-
-//输出M5表格
-bool __Func_Display_M5(vector<LSAI_SGIT > SGIT, LSAS style) {
-	if (style == LSAS::L || style == LSAS::QZL) {
-		cout << "MOD.G.L" << "\tNo.M" << "\tC.No.M" << "\tR.D.M" << "\tD.M" << "\tN.D.G" << "\tL.G" << endl;
-		for (unsigned int G = 0; G <= 4; ++G) {
-			cout << SGIT[G].MOD_grade_level << "\t" << SGIT[G].no_of_modules << "\t" << SGIT[G].cum_no_of_modules
-				<< "\t" << SGIT[G].remainder_damaged_modules << "\t" << SGIT[G].ST.LQZLT.damaged_modules
-				<< "\t" << SGIT[G].ST.LQZLT.notional_damage_grade << "\t" << SGIT[G].lower_of_grades << endl;
-		}
-	}
-	else if (style == LSAS::CT1 || style == LSAS::CT2 || style == LSAS::SA) {
-		cout << "MOD.G.L" << "\tNo.M" << "\tC.No.M" << "\tR.D.M" << "\tCT.R.M" << "\tCT.R.G" << "\tCT.D.M" << "\tCT.D.G" << "\tSA.D.M" << "\tSA.D.G" << "\tL.G" << endl;
-		for (unsigned int G = 0; G <= 4; ++G) {
-			cout << SGIT[G].MOD_grade_level << "\t" << SGIT[G].no_of_modules << "\t" << SGIT[G].cum_no_of_modules << "\t" << SGIT[G].remainder_damaged_modules
-				<< "\t" << /*SGIT[G].ST.CTSAT.CT_regularity_modules*/"-" << "\t" << SGIT[G].ST.CTSAT.CT_regularity_grade
-				<< "\t" << SGIT[G].ST.CTSAT.CT_damaged_modules << "\t" << SGIT[G].ST.CTSAT.CT_damage_grade
-				<< "\t" << SGIT[G].ST.CTSAT.SA_damaged_modules << "\t" << SGIT[G].ST.CTSAT.SA_damage_grade
-				<< "\t" << SGIT[G].lower_of_grades << endl;
-		}
-	}
-	return true;
-}
-
-//输出T7A表格
-bool __Func_Display_T7A(vector<MOD_GIT > MODGIT) {
-	cout << "MOD.C.G.L" << "\tNo.C.L" << "\tC.No.C" << "\tR.C" << "\tN.U.ECC" << "\tN.UEC" << "\tN.UEC.G" << "\tL.G" << endl;
-	for (unsigned int G = 0; G <= 4; ++G) {
-		cout << MODGIT[G].MOD_codeword_grade_level << "\t" << MODGIT[G].No_of_codewords_at_level_a << "\t" << MODGIT[G].cumulative_no_of_codewords_at_level_a_or_higher
-			<< "\t" << MODGIT[G].remaining_codewords << "\t" << MODGIT[G].notional_unused_error_correction_capacity
-			<< "\t" << MODGIT[G].notional_UEC << "\t" << MODGIT[G].notional_UEC_grade
-			<< "\t" << MODGIT[G].lower_of_a_or_d << endl;
-	}
-	return true;
-}
-
-#endif
 
 //15415 Table 7(A) (P19) Create & Edit
-GradeSymbol _Func_MOD_T7A(MOD_DAMIT DataAreaMODGradeTable, vector<MOD_GIT > &MODGIT, const unsigned int error_correction_capacity) {
+TwoDBarcodeGrading::GradeSymbol TwoDBarcodeGrading::_Func_MOD_T7A(TwoDBarcodeGrading::MOD_DAMIT DataAreaMODGradeTable, vector<TwoDBarcodeGrading::MOD_GIT > &MODGIT, const unsigned int error_correction_capacity) {
 	if (DataAreaMODGradeTable.modinfo.size() == 0)
-		return GradeSymbol::F;
+		return TwoDBarcodeGrading::GradeSymbol::F;
 
 	//第一列 Init
 	for (unsigned int G = 0; G <= 4; ++G) {
@@ -466,7 +1191,7 @@ GradeSymbol _Func_MOD_T7A(MOD_DAMIT DataAreaMODGradeTable, vector<MOD_GIT > &MOD
 }
 
 //计算CT转换率
-unsigned int _Func_FPD_TransitionRatioTest(vector<double > SA_T, vector<double > CT_T) {
+unsigned int TwoDBarcodeGrading::_Func_FPD_TransitionRatioTest(vector<double > SA_T, vector<double > CT_T) {
 	vector<int > SA;
 	for each(auto var in SA_T) {
 		if (var >= 0)
@@ -524,7 +1249,7 @@ unsigned int _Func_FPD_TransitionRatioTest(vector<double > SA_T, vector<double >
 }
 
 //滑动大小为5的窗口判断module error //16022 P109 e
-bool _Func_FPD_CTRegularityTest(LSAI_MT MT, vector<LSAI_SGIT > &SGIT) {
+bool TwoDBarcodeGrading::_Func_FPD_CTRegularityTest(TwoDBarcodeGrading::LSAI_MT MT, vector<TwoDBarcodeGrading::LSAI_SGIT > &SGIT) {
 	if (MT.modinfo.size() == 0 || SGIT.size() == 0)
 		return false;
 	//当module的数量小于5的时候，窗口不需要进行滑动
@@ -572,7 +1297,7 @@ bool _Func_FPD_CTRegularityTest(LSAI_MT MT, vector<LSAI_SGIT > &SGIT) {
 }
 
 //在CT中module error 占总module的比例 //16022 P109 f
-bool _Func_FPD_CTDamageTest(LSAI_MT MT, vector<LSAI_SGIT > &SGIT) {
+bool TwoDBarcodeGrading::_Func_FPD_CTDamageTest(TwoDBarcodeGrading::LSAI_MT MT, vector<TwoDBarcodeGrading::LSAI_SGIT > &SGIT) {
 	if (MT.modinfo.size() == 0 || SGIT.size() == 0)
 		return false;
 	SGIT[0].ST.CTSAT.CT_damaged_modules = (double)(MT.numofgradeB + MT.numofgradeC + MT.numofgradeD + MT.numofgradeE) / MT.sum * 1.0;
@@ -602,7 +1327,7 @@ bool _Func_FPD_CTDamageTest(LSAI_MT MT, vector<LSAI_SGIT > &SGIT) {
 }
 
 //在SA中module error 占总module的比例 //16022 P109 g
-bool _Func_FPD_SAFixedPatternTest(LSAI_MT MT, vector<LSAI_SGIT > &SGIT) {
+bool TwoDBarcodeGrading::_Func_FPD_SAFixedPatternTest(TwoDBarcodeGrading::LSAI_MT MT, vector<TwoDBarcodeGrading::LSAI_SGIT > &SGIT) {
 	if (MT.modinfo.size() == 0 || SGIT.size() == 0)
 		return false;
 	SGIT[0].ST.CTSAT.SA_damaged_modules = (double)(MT.numofgradeB + MT.numofgradeC + MT.numofgradeD + MT.numofgradeE) / MT.sum * 1.0;
@@ -632,7 +1357,7 @@ bool _Func_FPD_SAFixedPatternTest(LSAI_MT MT, vector<LSAI_SGIT > &SGIT) {
 }
 
 //16022 Table M.4 Create
-bool _Func_FPD_TM4(vector<double > info, LSAI_MT &MT, LSAS style) {
+bool TwoDBarcodeGrading::_Func_FPD_TM4(vector<double > info, TwoDBarcodeGrading::LSAI_MT &MT, TwoDBarcodeGrading::LSAS style) {
 	if (style == LSAS::L) {
 		for each(double mod in info) {
 			++MT.sum;
@@ -783,7 +1508,6 @@ bool _Func_FPD_TM4(vector<double > info, LSAI_MT &MT, LSAS style) {
 			else {
 				mod = -mod;
 			}
-			//mod = mod * flag;
 			if (mod >= 0.5) {
 				++MT.numofgradeA;
 				pair<double, GradeSymbol> ipa;
@@ -833,7 +1557,7 @@ bool _Func_FPD_TM4(vector<double > info, LSAI_MT &MT, LSAS style) {
 }
 
 //16022 Table M.5 Init
-bool _Func_FPD_TM5_Init(vector<LSAI_SGIT > &SGIT) {
+bool TwoDBarcodeGrading::_Func_FPD_TM5_Init(vector<TwoDBarcodeGrading::LSAI_SGIT > &SGIT) {
 	for (int g = 4; g >= 0; --g) {
 		LSAI_SGIT row;
 		row.MOD_grade_level = g;
@@ -846,7 +1570,7 @@ bool _Func_FPD_TM5_Init(vector<LSAI_SGIT > &SGIT) {
 }
 
 //16022 Table M.5 Edit
-bool _Func_FPD_TM5_Edit(LSAI_MT info, vector<LSAI_SGIT > &SGIT, LSAS style) {
+bool TwoDBarcodeGrading::_Func_FPD_TM5_Edit(TwoDBarcodeGrading::LSAI_MT info, vector<TwoDBarcodeGrading::LSAI_SGIT > &SGIT, TwoDBarcodeGrading::LSAS style) {
 	//当区域为L或者QZL时，子表格有1项2列
 	if (style == LSAS::L || style == LSAS::QZL) {
 		//4 填写表格第2列到第5列
@@ -896,9 +1620,6 @@ bool _Func_FPD_TM5_Edit(LSAI_MT info, vector<LSAI_SGIT > &SGIT, LSAS style) {
 			else if (SGIT[G].ST.LQZLT.damaged_modules > 0.17) {
 				SGIT[G].ST.LQZLT.notional_damage_grade = GradeSymbol::F;
 			}
-
-			//将等级较小值填到表格第7列
-			//SGIT[G].lower_of_grades = SGIT[G].ST.LQZLT.notional_damage_grade < SGIT[G].MOD_grade_level ? SGIT[G].ST.LQZLT.notional_damage_grade : SGIT[G].MOD_grade_level;
 		}
 
 		return true;
@@ -930,13 +1651,14 @@ bool _Func_FPD_TM5_Edit(LSAI_MT info, vector<LSAI_SGIT > &SGIT, LSAS style) {
 		SGIT[4].cum_no_of_modules = info.sum;
 		SGIT[4].remainder_damaged_modules = 0;
 
+
 		return true;
 	}
 	return false;
 }
 
 //16022 Table M.5 Set Last Column
-bool _Func_FPD_TM5_SetLowest_For_LastColumn(vector<LSAI_SGIT > &SGIT, LSAS style) {
+bool TwoDBarcodeGrading::_Func_FPD_TM5_SetLowest_For_LastColumn(vector<TwoDBarcodeGrading::LSAI_SGIT > &SGIT, TwoDBarcodeGrading::LSAS style) {
 	if (style == LSAS::L || style == LSAS::QZL) {
 		for (unsigned int G = 0; G <= 4; ++G) {
 			SGIT[G].lower_of_grades = SGIT[G].ST.LQZLT.notional_damage_grade < SGIT[G].MOD_grade_level ? SGIT[G].ST.LQZLT.notional_damage_grade : SGIT[G].MOD_grade_level;
@@ -964,7 +1686,7 @@ bool _Func_FPD_TM5_SetLowest_For_LastColumn(vector<LSAI_SGIT > &SGIT, LSAS style
 }
 
 //16022 Table M.5 Set Last Row ( Highest of Last Column )
-unsigned int _Func_Fpd_TM5_GetHighest_Of_LastColumn(vector<LSAI_SGIT > SGIT) {
+unsigned int TwoDBarcodeGrading::_Func_Fpd_TM5_GetHighest_Of_LastColumn(vector<TwoDBarcodeGrading::LSAI_SGIT > SGIT) {
 	unsigned int max = 0;
 	for (unsigned int G = 0; G <= 4; ++G) {
 		if (SGIT[G].lower_of_grades >= max)
@@ -974,7 +1696,7 @@ unsigned int _Func_Fpd_TM5_GetHighest_Of_LastColumn(vector<LSAI_SGIT > SGIT) {
 }
 
 //计算SC值
-bool Func_SC(unsigned char** pBuffer, const long width, const long height, double &SC, double &GT, GradeSymbol &Grade) {
+bool TwoDBarcodeGrading::Func_SC(unsigned char** pBuffer, const long width, const long height, double &SC, double &GT, TwoDBarcodeGrading::GradeSymbol &Grade) {
 	if (pBuffer == NULL)
 		return false;
 	if (width == 0 || height == 0)
@@ -1041,7 +1763,6 @@ bool Func_SC(unsigned char** pBuffer, const long width, const long height, doubl
 	GT = (avglower + avggreater) / 2;
 
 	double score;
-	//score = 1.0 * (avggreater - avglower) / avggreater;
 	score = 1.0 * (avggreater - avglower) / 255.0;
 
 	if (score >= 0.7) {
@@ -1064,7 +1785,7 @@ bool Func_SC(unsigned char** pBuffer, const long width, const long height, doubl
 }
 
 //Sobel算子运算
-bool Func_Sobel(unsigned char** img, long** &gx, long** &gy, const long width, const long height) {
+bool TwoDBarcodeGrading::Func_Sobel(unsigned char** img, long** &gx, long** &gy, const long width, const long height) {
 	if (img == NULL || gx == NULL || gy == NULL)
 		return false;
 	unsigned char* r1 = NULL;
@@ -1099,51 +1820,23 @@ bool Func_Sobel(unsigned char** img, long** &gx, long** &gy, const long width, c
 }
 
 //根据Sobel运算得到的X、Y方向的梯度值计算每个像素的梯度
-bool Func_Gradient(long** gx, long** gy, double** &G, const long width, const long height) {
+bool TwoDBarcodeGrading::Func_Gradient(long** gx, long** gy, double** &G, const long width, const long height) {
 	if (gx == NULL || gy == NULL || G == NULL)
 		return false;
-
-#ifdef SOBEL_IMG
-	////
-	unsigned char** preview = new unsigned char*[height];
-	for (unsigned long i = 0; i < height; ++i) {
-		preview[i] = new unsigned char[width];
-	}
-
-#endif
 
 	for (long j = 0; j < height; ++j) {
 		for (long i = 0; i < width; ++i) {
 			long long x = gx[j][i];
 			long long y = gy[j][i];
 			G[j][i] = sqrt((x * x) + (y * y)) > 255 ? 255 : sqrt((x * x) + (y * y));
-#ifdef SOBEL_IMG
-			preview[j][i] = (unsigned char)G[j][i];
-#endif
 		}
 	}
-
-#ifdef SOBEL_IMG
-	////
-	CImg * pPreviewImg = create_image();
-	pPreviewImg->InitArray8(preview, height, width);
-	string filepath = NowTimeToFileName("..//results//dqt//Preview", ".bmp");
-	pPreviewImg->SaveToFile(filepath.c_str());
-
-	////
-	for (unsigned long i = 0; i < height; ++i) {
-		delete[] preview[i];
-	}
-	delete[] preview;
-	preview = NULL;
-
-#endif
 
 	return true;
 }
 
 //将运算得到的边缘梯度图的X、Y方向分别映射
-bool Func_Mapping(double** G, long long* &mx, long long* &my, const long width, const long height) {
+bool TwoDBarcodeGrading::Func_Mapping(double** G, long long* &mx, long long* &my, const long width, const long height) {
 	if (G == NULL || mx == NULL || my == NULL)
 		return false;
 	for (long j = 0; j < height; ++j) {
@@ -1156,7 +1849,7 @@ bool Func_Mapping(double** G, long long* &mx, long long* &my, const long width, 
 }
 
 //将映射后的一维信号进行滤波
-bool Func_Gauss(long long* mx, long long* my, long long* &Amx, long long* &Amy, const long width, const long height, const int* model, const int M) {
+bool TwoDBarcodeGrading::Func_Gauss(long long* mx, long long* my, long long* &Amx, long long* &Amy, const long width, const long height, const int* model, const int M) {
 	if (mx == NULL || Amx == NULL)
 		return false;
 	Amx[0] = (mx[0] * model[3] + mx[1] * model[4] + mx[2] * model[5] + mx[3] * model[6]) / M;
@@ -1185,7 +1878,7 @@ bool Func_Gauss(long long* mx, long long* my, long long* &Amx, long long* &Amy, 
 }
 
 //排除滤波后一维信号中的中间干扰点
-bool Func_CompareHill(long long* Amx, long long* Amy, vector<long > &Xmaxima, vector<long > &Ymaxima, const long width, const long height) {
+bool TwoDBarcodeGrading::Func_CompareHill(long long* Amx, long long* Amy, vector<long > &Xmaxima, vector<long > &Ymaxima, const long width, const long height) {
 	if (Amx == NULL || Amy == NULL || Xmaxima.size() == 0 || Ymaxima.size() == 0)
 		return false;
 
@@ -1209,32 +1902,25 @@ bool Func_CompareHill(long long* Amx, long long* Amy, vector<long > &Xmaxima, ve
 		if (d4 >= max) {
 			max = d4;
 		}
-		pair<long, long> temp;
+		pair<long, long> temp;//
 		temp.first = y;
 		temp.second = max;
 		Xdifference.push_back(temp);
-
-		//cout << "Y LOCATION:" << y << "\tDISTANCE:" << y - ypre << "\tMAXVALLUE:" << max << endl;
 		ypre = y;
 	}
 
 	long XMAX = 0;
-	for each(auto pa in Xdifference) {
-		if (pa.second > XMAX)
-			XMAX = pa.second;
+	for (vector<pair<long, long> >::iterator pa = Xdifference.begin(); pa < Xdifference.end(); ++pa) {
+		if (pa->second > XMAX)
+			XMAX = pa->second;
 	}
 
 	long Xthreshold = XMAX * 15 / 100;
-	for each(auto pa in Xdifference) {
-		if (pa.second < Xthreshold) {
-			Xmaxima.erase(find(Xmaxima.begin(), Xmaxima.end(), pa.first));
+	for (vector<pair<long, long> >::iterator pa = Xdifference.begin(); pa < Xdifference.end(); ++pa) {
+		if (pa->second < Xthreshold) {
+			Xmaxima.erase(find(Xmaxima.begin(), Xmaxima.end(), pa->first));
 		}
 	}
-
-
-
-	//cout << "------------------------" << endl;
-
 	vector<pair<long, long> > Ydifference;
 	for each(long x in Ymaxima) {
 		long max = 0;
@@ -1254,53 +1940,46 @@ bool Func_CompareHill(long long* Amx, long long* Amy, vector<long > &Xmaxima, ve
 		if (d4 >= max) {
 			max = d4;
 		}
-		pair<long, long> temp;
+		pair<long, long> temp;//
 		temp.first = x;
 		temp.second = max;
 		Ydifference.push_back(temp);
-
-		//cout << "X LOCATION:" << x << "\tDISTANCE:" << x - xpre << "\tMAXVALLUE:" << max << endl;
 		xpre = x;
 	}
 
 	long YMAX = 0;
-	for each(auto pa in Ydifference) {
-		if (pa.second > YMAX)
-			YMAX = pa.second;
+	for (vector<pair<long, long> >::iterator pa = Ydifference.begin(); pa < Ydifference.end(); ++pa) {
+		if (pa->second > YMAX)
+			YMAX = pa->second;
 	}
 
 	long Ythreshold = YMAX * 15 / 100;
-	for each(auto pa in Ydifference) {
-		if (pa.second < Ythreshold) {
-			Ymaxima.erase(find(Ymaxima.begin(), Ymaxima.end(), pa.first));
+	for (vector<pair<long, long> >::iterator pa = Ydifference.begin(); pa < Ydifference.end(); ++pa) {
+		if (pa->second < Ythreshold) {
+			Ymaxima.erase(find(Ymaxima.begin(), Ymaxima.end(), pa->first));
 		}
 	}
-
 	return true;
 }
 
 //得到滤波后的一维信号的波峰点位
-bool Func_GetMaxima(long long* Amx, long long* Amy, vector<long > &Xmaxima, vector<long > &Ymaxima, const long width, const long height) {
+bool TwoDBarcodeGrading::Func_GetMaxima(long long* Amx, long long* Amy, vector<long > &Xmaxima, vector<long > &Ymaxima, const long width, const long height) {
 	if (Amx == NULL || Amy == NULL)
 		return false;
 	for (long y = 2; y < height - 2; ++y) {
 		if (Amx[y] >= Amx[y - 1] && Amx[y - 1] >= Amx[y - 2] && Amx[y] > Amx[y + 1] && Amx[y + 1] >= Amx[y + 2])
-			//if (Amx[y] >= Amx[y - 1] && Amx[y] > Amx[y + 1])
 			Xmaxima.push_back(y);
 	}
-	//Xmaxima.push_back(height - 1);
 
 	for (long x = 2; x < width - 2; ++x) {
 		if (Amy[x] >= Amy[x - 1] && Amy[x - 1] >= Amy[x - 2] && Amy[x] > Amy[x + 1] && Amy[x + 1] >= Amy[x + 2])
-			//if (Amy[x] >= Amy[x - 1] && Amy[x] > Amy[x + 1])
 			Ymaxima.push_back(x);
 	}
-	//Ymaxima.push_back(width - 1);
 	return true;
 }
 
 //求得每个信息点的像素值均值
-bool Func_ModuleAvg(unsigned char** img, vector<long > Xmaxima, vector<long > Ymaxima, vector<vector<unsigned char > > &avr, const long width, const long height) {
+bool TwoDBarcodeGrading::Func_ModuleAvg(unsigned char** img, vector<long > Xmaxima, vector<long > Ymaxima, vector<vector<unsigned char > > &avr, const long width, const long height) {
 	if (img == NULL || Xmaxima.size() == 0 || Ymaxima.size() == 0)
 		return false;
 	long Xpre = 0, Ypre = 0;
@@ -1335,7 +2014,7 @@ bool Func_ModuleAvg(unsigned char** img, vector<long > Xmaxima, vector<long > Ym
 }
 
 //求全图数据区MOD值等级
-bool Func_MOD_DataAreaModulation(vector<vector<unsigned char > > R, MOD_DAMIT &DataAreaMODGradeTable, const double GT, const double SC) {
+bool TwoDBarcodeGrading::Func_MOD_DataAreaModulation(vector<vector<unsigned char > > R, TwoDBarcodeGrading::MOD_DAMIT &DataAreaMODGradeTable, const double GT, const double SC) {
 	if (R.size() < 4 || SC == 0)
 		return false;
 	for (vector<vector<unsigned char > >::iterator p = R.begin() + 2; p != R.end() - 2; ++p) {
@@ -1382,29 +2061,11 @@ bool Func_MOD_DataAreaModulation(vector<vector<unsigned char > > R, MOD_DAMIT &D
 		}
 
 	}
-
-	//mod = min;
-	//if (min >= 0.5) {
-	//	grade = A;
-	//}
-	//else if (min >= 0.4) {
-	//	grade = B;
-	//}
-	//else if (min >= 0.3) {
-	//	grade = C;
-	//}
-	//else if (min >= 0.2) {
-	//	grade = D;
-	//}
-	//else {
-	//	grade = E;
-	//}
-
 	return true;
 }
 
 //求AN值
-bool Func_AN(vector<long > Xmaxima, vector<long > Ymaxima, double &score, GradeSymbol &grade) {
+bool TwoDBarcodeGrading::Func_AN(vector<long > Xmaxima, vector<long > Ymaxima, double &score, TwoDBarcodeGrading::GradeSymbol &grade) {
 	if (Xmaxima.size() == 0 || Ymaxima.size() == 0)
 		return false;
 	double xavg = (*prev(Ymaxima.end()) - *Ymaxima.begin())*1.0 / (Ymaxima.size() - 1);
@@ -1427,23 +2088,19 @@ bool Func_AN(vector<long > Xmaxima, vector<long > Ymaxima, double &score, GradeS
 	if (score <= 0.06) {
 		grade = GradeSymbol::A;
 	}
-
 	return true;
 }
 
 //求网格偏差GN
-bool Func_GN(vector<long > Xmaxima, vector<long > Ymaxima, double &score, GradeSymbol &grade) {
+bool TwoDBarcodeGrading::Func_GN(vector<long > Xmaxima, vector<long > Ymaxima, double &score, TwoDBarcodeGrading::GradeSymbol &grade) {
 	double xavg = (*prev(Ymaxima.end()) - *Ymaxima.begin())*1.0 / (Ymaxima.size() - 1);
 	double yavg = (*prev(Xmaxima.end()) - *Xmaxima.begin())*1.0 / (Xmaxima.size() - 1);
-	//int xsize = xavg + 0.5, ysize = yavg + 0.5;
 
 	vector<double > Xdistance, Ydistance;
 	for (int i = 0; i < (Ymaxima.size() - 1); ++i) {
-		//Xideal.push_back(i*xsize);
 		Xdistance.push_back(abs((Ymaxima[i] - Ymaxima[0]) - 1.0*i*xavg));
 	}
 	for (int i = 0; i < (Xmaxima.size() - 1); ++i) {
-		//Yideal.push_back(i*ysize);
 		Ydistance.push_back(abs((Xmaxima[i] - Xmaxima[0]) - 1.0*i*yavg));
 	}
 
@@ -1459,7 +2116,7 @@ bool Func_GN(vector<long > Xmaxima, vector<long > Ymaxima, double &score, GradeS
 			ymaxdistance = p;
 	}
 
-	score = sqrt((xmaxdistance*xmaxdistance) + (ymaxdistance*ymaxdistance)) / xavg/*sqrt((xavg*xavg) + (yavg*yavg))*/;
+	score = sqrt((xmaxdistance*xmaxdistance) + (ymaxdistance*ymaxdistance)) / xavg;
 
 	if (score > 0.75) {
 		grade = GradeSymbol::F;
@@ -1481,10 +2138,10 @@ bool Func_GN(vector<long > Xmaxima, vector<long > Ymaxima, double &score, GradeS
 }
 
 //L形区域以及反L形区域的各单元像素均值与MOD值计算与FPD各项分值计算
-bool Func_FPD(unsigned char** img, FPD_G &FPD_Grades, vector<long > Xmaxima, vector<long > Ymaxima, const double SC, const double GT, const long width, const long height) {
+bool TwoDBarcodeGrading::Func_FPD(unsigned char** img, TwoDBarcodeGrading::FPD_G &FPD_Grades, vector<long > Xmaxima, vector<long > Ymaxima, const double SC, const double GT, const long width, const long height) {
 	if (img == NULL || Xmaxima.size() < 2 || Ymaxima.size() < 2)
 		return false;
-	LSAI info;
+	TwoDBarcodeGrading::LSAI info;
 
 	//获得QZL1、QZL2、SA1、SA2 的实际宽度
 	if (*Ymaxima.begin() - 0 > Ymaxima[1] - Ymaxima[0])
@@ -1565,18 +2222,6 @@ bool Func_FPD(unsigned char** img, FPD_G &FPD_Grades, vector<long > Xmaxima, vec
 			info.L1AVG.push_back(mod);
 		}
 	}
-	//sum = 0;
-	//count = 0;
-	//for (long y = *prev(Xmaxima.end()) + 1; y < *prev(Xmaxima.end()) + info.downdistance; ++y) {
-	//	for (long x = Ymaxima[0] + 1; x < Ymaxima[1]; ++x) {
-	//		sum += img[y][x];
-	//		++count;
-	//	}
-	//}
-	//if (count != 0) {
-	//	mod = sum / count;
-	//	info.L1AVG.push_back(mod);
-	//}
 
 	//QZL2
 	xpre = Ymaxima[0] - info.leftdistance + 1;
@@ -1609,7 +2254,7 @@ bool Func_FPD(unsigned char** img, FPD_G &FPD_Grades, vector<long > Xmaxima, vec
 	}
 
 	//L2
-	xpre = Ymaxima[0]/* - info.leftdistance*/ + 1;
+	xpre = Ymaxima[0] + 1;
 	for each(long xthr in Ymaxima) {
 		if (xthr == Ymaxima[0])//
 			continue;//
@@ -1738,94 +2383,6 @@ bool Func_FPD(unsigned char** img, FPD_G &FPD_Grades, vector<long > Xmaxima, vec
 		info.CT2MOD.push_back(mod);
 	}
 
-	{
-		cout << "L1AVG:\t";
-		for each(double var in info.L1AVG) {
-			cout << var << " ";
-		}
-		cout << endl;
-		cout << "QZL1AVG:\t";
-		for each(double var in info.QZL1AVG) {
-			cout << var << " ";
-		}
-		cout << endl;
-		cout << "L2AVG:\t";
-		for each(double var in info.L2AVG) {
-			cout << var << " ";
-		}
-		cout << endl;
-		cout << "QZL2AVG:\t";
-		for each(double var in info.QZL2AVG) {
-			cout << var << " ";
-		}
-		cout << endl;
-		cout << "SA1AVG:\t";
-		for each(double var in info.SA1AVG) {
-			cout << var << " ";
-		}
-		cout << endl;
-		cout << "CT1AVG:\t";
-		for each(double var in info.CT1AVG) {
-			cout << var << " ";
-		}
-		cout << endl;
-		cout << "SA2AVG:\t";
-		for each(double var in info.SA2AVG) {
-			cout << var << " ";
-		}
-		cout << endl;
-		cout << "CT2AVG:\t";
-		for each(double var in info.CT2AVG) {
-			cout << var << " ";
-		}
-		cout << endl;
-		cout << endl;
-
-		cout.precision(2);
-		cout << "**L1MOD:\t";
-		for each(double var in info.L1MOD) {
-			cout << var << " ";
-		}
-		cout << endl;
-		cout << "**QZL1MOD:\t";
-		for each(double var in info.QZL1MOD) {
-			cout << var << " ";
-		}
-		cout << endl;
-		cout << "**L2MOD:\t";
-		for each(double var in info.L2MOD) {
-			cout << var << " ";
-		}
-		cout << endl;
-		cout << "**QZL2MOD:\t";
-		for each(double var in info.QZL2MOD) {
-			cout << var << " ";
-		}
-		cout << endl;
-		cout << "**SA1MOD:\t";
-		for each(double var in info.SA1MOD) {
-			cout << var << " ";
-		}
-		cout << endl;
-		cout << "**CT1MOD:\t";
-		for each(double var in info.CT1MOD) {
-			cout << var << " ";
-		}
-		cout << endl;
-		cout << "**SA2MOD:\t";
-		for each(double var in info.SA2MOD) {
-			cout << var << " ";
-		}
-		cout << endl;
-		cout << "**CT2MOD:\t";
-		for each(double var in info.CT2MOD) {
-			cout << var << " ";
-		}
-		cout << endl;
-		cout.precision(6);
-	}
-
-
 	//L1
 	LSAI_MT L1_modinfotab;//M4
 	_Func_FPD_TM4(info.L1MOD, L1_modinfotab, LSAS::L);
@@ -1836,9 +2393,6 @@ bool Func_FPD(unsigned char** img, FPD_G &FPD_Grades, vector<long > Xmaxima, vec
 
 	_Func_FPD_TM5_SetLowest_For_LastColumn(L1_seggradingtab, LSAS::L);
 	FPD_Grades.L1_grade = _Func_Fpd_TM5_GetHighest_Of_LastColumn(L1_seggradingtab);
-
-	cout << "L1M5T:" << endl;
-	__Func_Display_M5(L1_seggradingtab, LSAS::L);
 
 	//L2
 	LSAI_MT L2_modinfotab;//M4
@@ -1851,9 +2405,6 @@ bool Func_FPD(unsigned char** img, FPD_G &FPD_Grades, vector<long > Xmaxima, vec
 	_Func_FPD_TM5_SetLowest_For_LastColumn(L2_seggradingtab, LSAS::L);
 	FPD_Grades.L2_grade = _Func_Fpd_TM5_GetHighest_Of_LastColumn(L2_seggradingtab);
 
-	cout << "L2M5T:" << endl;
-	__Func_Display_M5(L2_seggradingtab, LSAS::L);
-
 	//QZL1
 	LSAI_MT QZL1_modinfotab;//M4
 	_Func_FPD_TM4(info.QZL1MOD, QZL1_modinfotab, LSAS::QZL);
@@ -1865,9 +2416,6 @@ bool Func_FPD(unsigned char** img, FPD_G &FPD_Grades, vector<long > Xmaxima, vec
 	_Func_FPD_TM5_SetLowest_For_LastColumn(QZL1_seggradingtab, LSAS::QZL);
 	FPD_Grades.QZL1_grade = _Func_Fpd_TM5_GetHighest_Of_LastColumn(QZL1_seggradingtab);
 
-	cout << "QZL1M5T:" << endl;
-	__Func_Display_M5(QZL1_seggradingtab, LSAS::QZL);
-
 	//QZL2
 	LSAI_MT QZL2_modinfotab;//M4
 	_Func_FPD_TM4(info.QZL2MOD, QZL2_modinfotab, LSAS::QZL);
@@ -1878,9 +2426,6 @@ bool Func_FPD(unsigned char** img, FPD_G &FPD_Grades, vector<long > Xmaxima, vec
 
 	_Func_FPD_TM5_SetLowest_For_LastColumn(QZL2_seggradingtab, LSAS::QZL);
 	FPD_Grades.QZL2_grade = _Func_Fpd_TM5_GetHighest_Of_LastColumn(QZL2_seggradingtab);
-
-	cout << "QZL2M5T:" << endl;
-	__Func_Display_M5(QZL2_seggradingtab, LSAS::QZL);
 
 	//CTSA1
 	LSAI_MT CTSA1_modinfotab;//M4
@@ -1904,17 +2449,10 @@ bool Func_FPD(unsigned char** img, FPD_G &FPD_Grades, vector<long > Xmaxima, vec
 	FPD_Grades.CTSA_segs_grades.begin()->notional_damage_test_grades = _Func_Fpd_TM5_GetHighest_Of_LastColumn(CTSA1_seggradingtab);
 	FPD_Grades.CTSA_segs_grades.begin()->transition_ratio_test_grade = _Func_FPD_TransitionRatioTest(info.SA1MOD, info.CT1MOD);
 
-	cout << "CT1M5T:" << endl;
-	__Func_Display_M5(CTSA1_seggradingtab, LSAS::CT1);
-
-	cout << endl;
-
 	//CTSA2
 	LSAI_MT CTSA2_modinfotab;//M4
 	_Func_FPD_TM4(info.CT2MOD, CTSA2_modinfotab, LSAS::CT2);
 	_Func_FPD_TM4(info.SA2MOD, CTSA2_modinfotab, LSAS::SA);
-
-
 
 	vector<LSAI_SGIT > CTSA2_seggradingtab;//M5
 	_Func_FPD_TM5_Init(CTSA2_seggradingtab);
@@ -1932,15 +2470,10 @@ bool Func_FPD(unsigned char** img, FPD_G &FPD_Grades, vector<long > Xmaxima, vec
 	_Func_FPD_TM5_SetLowest_For_LastColumn(CTSA2_seggradingtab, LSAS::CT2);
 	(FPD_Grades.CTSA_segs_grades.begin() + 1)->notional_damage_test_grades = _Func_Fpd_TM5_GetHighest_Of_LastColumn(CTSA2_seggradingtab);
 	(FPD_Grades.CTSA_segs_grades.begin() + 1)->transition_ratio_test_grade = _Func_FPD_TransitionRatioTest(info.SA2MOD, info.CT2MOD);
-
-	cout << "CT2M5T:" << endl;
-	__Func_Display_M5(CTSA2_seggradingtab, LSAS::CT2);
-
 }
 
 //16022 P111 M.1.4 Calculation and grading of average grade(计算L1 L2 QZL1 QZL2 （以及两个Segment区域的最小值）五项的均值再取最小)
-bool Func_CalculatePFDAverageGrade(FPD_G FPD_grades, Grade &grade) {
-	//unsigned int FPD = FPD_grades. < FPD_grades[1] ? FPD_grades[0] : FPD_grades[1];
+bool TwoDBarcodeGrading::Func_CalculatePFDAverageGrade(TwoDBarcodeGrading::FPD_G FPD_grades, TwoDBarcodeGrading::Grade &grade) {
 	unsigned int CTSA_FPD_1 =
 		FPD_grades.CTSA_segs_grades[0].notional_damage_test_grades < FPD_grades.CTSA_segs_grades[0].transition_ratio_test_grade ?
 		FPD_grades.CTSA_segs_grades[0].notional_damage_test_grades : FPD_grades.CTSA_segs_grades[0].transition_ratio_test_grade;
@@ -1972,238 +2505,4 @@ bool Func_CalculatePFDAverageGrade(FPD_G FPD_grades, Grade &grade) {
 		grade.FPD = GradeSymbol::F;
 
 	return true;
-}
-
-//-----功能入口-----
-bool Func(CImg* pImg, const unsigned int error_correction_capacity, Grade &grade) {
-	if (pImg == NULL)
-		return false;
-	if (error_correction_capacity == 0)
-		return false;
-
-	long width;
-	long height;
-
-	width = pImg->GetWidthPixel();
-	height = pImg->GetHeight();
-
-	//new
-
-	unsigned char** source = new unsigned char*[height];
-	for (unsigned long i = 0; i < height; ++i) {
-		source[i] = new unsigned char[width];
-	}
-
-	long** gx = new long*[height];
-	for (unsigned long i = 0; i < height; ++i) {
-		gx[i] = new long[width];
-	}
-
-	long** gy = new long*[height];
-	for (unsigned long i = 0; i < height; ++i) {
-		gy[i] = new long[width];
-	}
-
-	double** gradient = new double*[height];
-	for (unsigned long i = 0; i < height; ++i) {
-		gradient[i] = new double[width];
-	}
-
-	long long *mappedx = new long long[height];
-	long long *mappedy = new long long[width];
-	memset(mappedx, 0, sizeof(long long)*height);
-	memset(mappedy, 0, sizeof(long long)*width);
-
-	long long *aftermx = new long long[height];
-	long long *aftermy = new long long[width];
-	memset(aftermx, 0, sizeof(long long)*height);
-	memset(aftermy, 0, sizeof(long long)*width);
-
-	long long *remx = new long long[height];
-	long long *remy = new long long[width];
-	memset(remx, 0, sizeof(long long)*height);
-	memset(remy, 0, sizeof(long long)*width);
-
-	//trans
-	for (long j = 0; j < height; ++j) {
-		for (long i = 0; i < width; ++i) {
-			BYTE* pBuff = pImg->GetPixelAddressRow(j);
-			source[j][i] = pBuff[i];
-		}
-	}
-
-	//action
-	double GT;
-
-	bool rt = true;
-	rt = Func_SC(source, width, height, grade.SC_Score, GT, grade.SC);
-	if (rt == false)
-		return false;
-
-	rt = Func_Sobel(source, gx, gy, width, height);
-	if (rt == false)
-		return false;
-
-	rt = Func_Gradient(gx, gy, gradient, width, height);
-	if (rt == false)
-		return false;
-
-	rt = Func_Mapping(gradient, mappedx, mappedy, width, height);
-	if (rt == false)
-		return false;
-
-#ifdef COUT_MAPPING
-	cout << endl;
-	for (unsigned long x = 0; x < width; ++x) {
-		cout << mappedy[x] << " ";
-	}
-
-	cout << "\n---------------------------------" << endl;
-
-
-	cout << endl;
-	for (unsigned long y = 0; y < height; ++y) {
-		cout << mappedx[y] << " ";
-	}
-	cout << endl;
-
-	cout << "\n++++++++++++++++++++++++++++++++" << endl;
-
-#endif
-
-	const int model[7] = { 5,10,45,50,45,10,5 };
-	//const int model[7] = { 0,0,0,100,0,0,0 };
-	const int M = 100;
-	rt = Func_Gauss(mappedx, mappedy, aftermx, aftermy, width, height, model, M);
-
-#ifdef COUT_MAPPING
-	cout << endl;
-	for (unsigned long x = 0; x < width; ++x) {
-		cout << aftermy[x] << " ";
-	}
-
-	cout << "\n---------------------------------" << endl;
-
-
-	cout << endl;
-	for (unsigned long y = 0; y < height; ++y) {
-		cout << aftermx[y] << " ";
-	}
-	cout << endl;
-
-	cout << "\n++++++++++++++++++++++++++++++++" << endl;
-
-#endif
-
-	if (rt == false)
-		return false;
-	vector<long > Xmaxima, Ymaxima;
-	rt = Func_GetMaxima(aftermx, aftermy, Xmaxima, Ymaxima, width, height);
-	if (rt == false)
-		return false;
-	rt = Func_CompareHill(aftermx, aftermy, Xmaxima, Ymaxima, width, height);
-	if (rt == false)
-		return false;
-
-#ifdef _DEBUG
-	rt = __Func_DrawLine(source, Xmaxima, Ymaxima, width, height, 0xDD);
-	if (rt == false)
-		return false;
-#endif
-
-	vector<vector<unsigned char > > avr;
-	rt = Func_ModuleAvg(source, Xmaxima, Ymaxima, avr, width, height);
-	if (rt == false)
-		return false;
-
-	MOD_DAMIT DataAreaMODInfo;
-	vector<MOD_GIT> MODGradingTable;
-	rt = Func_MOD_DataAreaModulation(avr, DataAreaMODInfo, GT, grade.SC_Score);
-	if (rt != false) {
-		grade.MOD = _Func_MOD_T7A(DataAreaMODInfo, MODGradingTable, error_correction_capacity);
-#ifdef _DEBUG
-		//__Func_Display_T7A(MODGradingTable);
-#endif
-	}
-	else {
-		grade.MOD = GradeSymbol::F;
-	}
-
-	rt = Func_AN(Xmaxima, Ymaxima, grade.AN_Score, grade.AN);
-	if (rt == false)
-		return false;
-
-	rt = Func_GN(Xmaxima, Ymaxima, grade.GN_Score, grade.GN);
-	if (rt == false)
-		return false;
-
-	FPD_G FPD_Grades;
-	rt = Func_FPD(source, FPD_Grades, Xmaxima, Ymaxima, grade.SC_Score, GT, width, height);
-	if (rt == false)
-		return false;
-
-
-	Func_CalculatePFDAverageGrade(FPD_Grades, grade);
-
-
-	//delete
-	delete mappedx;
-	mappedx = NULL;
-	delete mappedy;
-	mappedy = NULL;
-	delete aftermx;
-	aftermx = NULL;
-	delete aftermy;
-	aftermy = NULL;
-
-
-	for (unsigned long i = 0; i < height; ++i) {
-		delete[] source[i];
-	}
-	delete[] source;
-	source = NULL;
-
-	for (unsigned long i = 0; i < height; ++i) {
-		delete[] gx[i];
-	}
-	delete[] gx;
-	gx = NULL;
-
-	for (unsigned long i = 0; i < height; ++i) {
-		delete[] gy[i];
-	}
-	delete[] gy;
-	gy = NULL;
-
-	for (unsigned long i = 0; i < height; ++i) {
-		delete[] gradient[i];
-	}
-	delete[] gradient;
-	gradient = NULL;
-
-
-	return true;
-}
-
-//-----程序入口-----
-int main() {
-	CImg* pImg = create_image();
-	//BOOL rt = pImg->AttachFromFile("..//imgs//2-1-0.bmp");
-	BOOL rt = pImg->AttachFromFile("..//imgs//TEST02//Fixed Pattern Damage_3_NA_2.bmp");
-	//BOOL rt = pImg->AttachFromFile("..//imgs//DST - 160814_192213_0000.bmp");
-	if (!rt)
-		return -1;
-	Grade Gr;
-
-	bool rt1 = true;
-	rt1 = Func(pImg, 30, Gr);
-
-	cout << "\nSC_Score = " << Gr.SC_Score << "\tSC_Grade = " << Gr.SC << endl;
-	cout << "MOD_Grade = " << Gr.MOD << endl;
-	cout << "AN_Score = " << Gr.AN_Score << "\tAN_Grade = " << Gr.AN << endl;
-	cout << "GN_Score = " << Gr.GN_Score << "\tGN_Grade = " << Gr.GN << endl;
-	cout << "FPD = " << Gr.FPD << endl;
-
-	getchar();
-	return 0;
 }

@@ -94,15 +94,15 @@ typedef enum BarcodeType {
 //条码各字符的信息
 typedef class BarcodeCharacterInfo final {
 public:
-	long p;
+	float p;
 	double RT[7];
-	long b1;
-	long b2;
-	long b3;
-	long e1;
-	long e2;
-	long e3;
-	long e4;
+	float b1;
+	float b2;
+	float b3;
+	float e1;
+	float e2;
+	float e3;
+	float e4;
 
 	BarcodeCharacterInfo() {
 		p = 0;
@@ -116,7 +116,7 @@ public:
 		e4 = 0;
 	}
 
-	void setValue(unsigned long loc1, unsigned long loc2, unsigned long loc3, unsigned long loc4, unsigned long loc5, unsigned long loc6, unsigned long loc7) {
+	void setValue(float loc1, float loc2, float loc3, float loc4, float loc5, float loc6, float loc7) {
 		p = loc7 - loc1;
 		b1 = loc2 - loc1;
 		b2 = loc4 - loc3;
@@ -639,7 +639,7 @@ bool _Func_ECminERNmax(vector<vector<vector<unsigned char > > > dataSet, double 
 		}
 		//找到ECset和ERNset中的EC最小值和ERN最大值
 		for each(auto var in ECset) {
-			if (var <= ECmin) {
+			if (var < ECmin) {
 				ECmin = var;
 			}
 		}
@@ -655,7 +655,7 @@ bool _Func_ECminERNmax(vector<vector<vector<unsigned char > > > dataSet, double 
 }
 
 //根据topmost和downmost两条界限确定的条码范围，进行分割，建立多条扫描线进行横向扫描
-bool Func_Scan(unsigned char** img, vector<vector<unsigned long > > &locDataSet, double GT, const unsigned int topmost, const unsigned int downmost, const long width, const long height, Grade &grade) {
+bool Func_Scan(const CImg* pImg, unsigned char** img, vector<vector<unsigned long > > &locDataSet, vector<vector<float > > &locDataSet2, double GT, const unsigned int topmost, const unsigned int downmost, const long width, const long height, Grade &grade) {
 	if (img == NULL) return false;
 	if (width == 0 || height == 0) return false;
 	if (topmost<0 || downmost>height) return false;
@@ -673,6 +673,29 @@ bool Func_Scan(unsigned char** img, vector<vector<unsigned long > > &locDataSet,
 		_Func_Split(rowPixels, locSet, GT, peakAndvalley);
 		pixDataSet.push_back(peakAndvalley);
 		locDataSet.push_back(locSet);
+		//
+		vector<float > locSet2;
+		int count = 0;
+		float* pxset = NULL;
+		float* pyset = NULL;
+		float* pamplitude = NULL;
+		float* pdistance = NULL;
+		bool rt = false;
+		rt = measure1(*pImg, 1.0, 10, 0, y, width - 1, y + 1, 1, measure_Transition::t_all, measure_interpolation::nearest_neighbor, count, pxset, pyset, pamplitude, pdistance);
+		if (rt) {
+			for (int i = 0; i < count; ++i) {
+				locSet2.push_back(pxset[i]);
+			}
+			locDataSet2.push_back(locSet2);
+			if (pxset)
+				delete pxset;
+			if (pyset)
+				delete pyset;
+			if (pamplitude)
+				delete pamplitude;
+			if (pdistance)
+				delete pdistance;
+		}
 	}
 	_Func_ECminERNmax(pixDataSet, GT, grade);
 	grade.MOD = grade.ECmin*1.0 / grade.SC*1.0;
@@ -752,7 +775,7 @@ bool Func_Grading(Grade &grade) {
 }
 
 //EAN128
-bool _Func_Decode_EAN128(vector<vector<unsigned long > > locDataSet, Grade &grade) {
+bool _Func_Decode_EAN128(vector<vector<float > > locDataSet, Grade &grade) {
 	if (locDataSet.size() == 0) return false;
 	unsigned int lineNum = locDataSet.size();
 	vector<double > rowScoreSet(lineNum);
@@ -764,7 +787,7 @@ bool _Func_Decode_EAN128(vector<vector<unsigned long > > locDataSet, Grade &grad
 		}
 		else {
 			vector<double > row;
-			for (vector<unsigned long >::iterator p = locDataSet.at(ln).begin(); p < locDataSet.at(ln).end(); p += 6) {
+			for (vector<float >::iterator p = locDataSet.at(ln).begin(); p < locDataSet.at(ln).end(); p += 6) {
 
 				if (p < locDataSet.at(ln).end() - 6) {
 					BChInfo ChI;
@@ -835,7 +858,7 @@ bool _Func_Decode_EAN128(vector<vector<unsigned long > > locDataSet, Grade &grad
 }
 
 //计算可译码度
-bool Func_Decodability(vector<vector<unsigned long > > locDataSet, BarcodeType type, Grade &grade) {
+bool Func_Decodability(vector<vector<float > > locDataSet, BarcodeType type, Grade &grade) {
 	if (locDataSet.size() == 0) return false;
 	switch (type) {
 	case BarcodeType::EAN_8: {
@@ -933,9 +956,10 @@ bool Func(CImg* pImg, Grade &grade) {
 	grade.GT = GT;
 	if (SC != 0) {
 		vector<vector<unsigned long > > locDataSet;
-		Func_Scan(source, locDataSet, GT, topmost, downmost, width, height, grade);
+		vector<vector<float > > locDataSet2;
+		Func_Scan(pImg, source, locDataSet, locDataSet2, GT, topmost, downmost, width, height, grade);
 		Func_Grading(grade);
-		Func_Decodability(locDataSet, BarcodeType::EAN_128, grade);
+		Func_Decodability(locDataSet2, BarcodeType::EAN_128, grade);
 		//vector<unsigned long > loc;
 		////Func_GetModuleWidth(locDataSet, loc);
 //#ifdef _DEBUG
@@ -957,7 +981,7 @@ bool Func(CImg* pImg, Grade &grade) {
 int main() {
 	CImg* pImg = create_image();
 	//BOOL rt = pImg->AttachFromFile("..//imgs//barcodes//barcode-test-66.bmp");
-	BOOL rt = pImg->AttachFromFile("..//imgs//barcodes//TEST2//Minimal Edge Contrast_4__0_16_2.bmp");
+	BOOL rt = pImg->AttachFromFile("..//imgs//barcodes//TEST2//Defects_1__0_29_3.bmp");
 	if (!rt)
 		return -1;
 
@@ -969,6 +993,6 @@ int main() {
 		<< "\nMOD_G:\t\t" << grade.MOD_Grade << " MOD_S:\t" << grade.MOD
 		<< "\nDefects_G:\t" << grade.Defects_Grade << " Defects_S:\t" << grade.Defects << endl;
 
-	//getchar();
+	getchar();
 	return 0;
 }

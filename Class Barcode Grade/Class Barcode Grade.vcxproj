@@ -19,9 +19,9 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{E0114089-7136-4275-B48C-E02289C59CD3}</ProjectGuid>
+    <ProjectGuid>{C97D34DF-C179-41BE-B800-444FB04C64C3}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
-    <RootNamespace>BarcodeQualityTest</RootNamespace>
+    <RootNamespace>ClassBarcodeGrade</RootNamespace>
     <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -142,7 +142,11 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="barcode_quality_test.cpp" />
+    <ClCompile Include="class_barcode_grade_NEW.cpp" />
+    <ClCompile Include="Source.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="class_barcode_grade_NEW.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
