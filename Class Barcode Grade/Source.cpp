@@ -1,12 +1,11 @@
 #include <iostream>
 
-
 #include "class_barcode_grade_NEW.h"
 
 int main() {
 	//OneDBarcodeGrading OneDgrading;
 	//CImg* pImg2 = create_image();
-	//BOOL rt2 = pImg2->AttachFromFile("..//imgs//barcodes//TEST2//Symbol Contrast_4__0_77_1.bmp");
+	//BOOL rt2 = pImg2->AttachFromFile("..//imgs//barcodes//TEST2//Minimal Edge Contrast_0__0_12_4.bmp");
 	//if (!rt2)
 	//	return -1;
 
@@ -26,10 +25,10 @@ int main() {
 
 	TwoDBarcodeGrading TwoDgrading;
 	CImg* pImg = create_image();
-	BOOL rt = pImg->AttachFromFile("..//imgs//code-test-31.bmp");
+	BOOL rt = pImg->AttachFromFile("..//imgs//code-test-16.bmp");
 	if (!rt)
 		return -1;
-	TwoDgrading.Func(pImg, 30, TwoDBarCodeType::DataMatrix);
+	TwoDgrading.Grading(pImg, 30, TwoDBarCodeType::DataMatrix);
 	TwoDgrading.SetDECODEGrade(4);
 	TwoDgrading.SetUECScore(0, 30);
 

@@ -5,6 +5,9 @@
 #include <cmath>
 #include <memory.h>
 
+#include <ctime>
+#include <string>
+
 #include <windows.h>
 #include "..//shared//ExtPatternRecognize.h"
 #ifdef _DEBUG
@@ -12,6 +15,8 @@
 #else
 #pragma  comment(lib, "../Release/hawkvis.lib")
 #endif
+
+#define CALC_TIME //计算消耗时间,结果在控制台下输出,如果非控制台环境,请注释该宏
 
 using namespace std;
 
@@ -133,13 +138,14 @@ public:
 	//参数:
 	//pImg:需要评级的一维码图像
 	//type:一维码类型
+
 	//返回值:是否成功评级
 	bool Grading(CImg* pImg, OneDBarCodeType type);
 
 	//函数功能:设置解码时获得的译码正确性级别
 	//参数:
 	//decode_grade:	解码时获得的译码正确性级别
-	//				（4为成功解码 0为不能解码）
+	//						  （4为成功解码 0为不能解码）
 	//返回值:是否成功执行（当设置其他数值时将使DECODE级别设置为F,并返回false）
 	bool SetDECODEGrade(int decode_grade);
 
@@ -193,7 +199,7 @@ private:
 	bool Func_GetGT(unsigned char** img, unsigned char &maxgray, unsigned char &mingray, double &SC, double &GT, const unsigned int topmost, const unsigned int downmost, const long width, const long height);
 
 	//获得指定行号的像素值
-	bool _Func_GetSelectedRowPixels(unsigned char** img, vector<unsigned char> &rowSet, const unsigned char rowNum, const long width);
+	bool _Func_GetSelectedRowPixels(unsigned char** img, vector<unsigned char> &rowSet, const unsigned long rowNum, const long width);
 
 	//将分割线经过的一维信号以GT为界限划分
 	bool _Func_Split(vector<unsigned char > &rowSet, vector<unsigned long > &locSet, double GT, vector<vector<unsigned char > > &sets);
@@ -202,7 +208,10 @@ private:
 	bool _Func_ECminERNmax(vector<vector<vector<unsigned char > > > dataSet, double GT, Grade &grade);
 
 	//根据topmost和downmost两条界限确定的条码范围，进行分割，建立多条扫描线进行横向扫描
-	bool Func_Scan(const CImg* pImg, unsigned char** img, vector<vector<unsigned long > > &locDataSet, vector<vector<float > > &locDataSet2, double GT, const unsigned int topmost, const unsigned int downmost, const long width, const long height, Grade &grade);
+	bool OneDBarcodeGrading::Func_Scan(const CImg* pImg, unsigned char** img, vector<vector<unsigned long > > &locDataSet, vector<vector<float > > &locDataSet2, double GT, const unsigned int topmost, const unsigned int downmost, const long width, const long height, OneDBarcodeGrading::Grade &grade);
+
+	//根据topmost和downmost两条界限确定的条码范围，进行分割，建立多条扫描线进行横向扫描(DEBUG)
+	bool Func_Scan(const CImg* pImg, unsigned char** img, vector<vector<unsigned long > > &locDataSet, vector<vector<float > > &locDataSet2, double GT, const unsigned int topmost, const unsigned int downmost, const long width, const long height, Grade &grade, vector<pair<string, clock_t > > &T);
 
 	//根据各项数据评级
 	bool Func_Grading(Grade &grade);
@@ -214,6 +223,7 @@ private:
 	bool Func_Decodability(vector<vector<float > > locDataSet, OneDBarCodeType type, Grade &grade);
 
 };
+
 
 class TwoDBarcodeGrading final {
 private:
@@ -465,7 +475,7 @@ public:
 	//error_correction_capacity:纠错容量
 	//type:二维码类型
 	//返回值:是否成功评级
-	bool Func(CImg* pImg, const unsigned int error_correction_capacity, TwoDBarCodeType type);
+	bool Grading(CImg* pImg, const unsigned int error_correction_capacity, TwoDBarCodeType type);
 
 	//函数功能:设置未使用的纠错的等级
 	//参数:
@@ -477,7 +487,7 @@ public:
 	//函数功能:设置解码时获得的译码正确性级别
 	//参数:
 	//decode_grade:	解码时获得的译码正确性级别
-	//				（4为成功解码 0为不能解码）
+	//						  （4为成功解码 0为不能解码）
 	//返回值:是否成功执行（当设置其他数值时将使DECODE级别设置为F,并返回false）
 	bool SetDECODEGrade(int decode_grade);
 
@@ -580,7 +590,7 @@ private:
 	bool Func_FPD(unsigned char** img, FPD_G &FPD_Grades, vector<long > Xmaxima, vector<long > Ymaxima, const double SC, const double GT, const long width, const long height);
 
 	//16022 P111 M.1.4 Calculation and grading of average grade(计算L1 L2 QZL1 QZL2 （以及两个Segment区域的最小值）五项的均值再取最小)
-	bool Func_CalculatePFDAverageGrade(FPD_G FPD_grades, Grade &grade);
+	bool Func_CalculateFPDAverageGrade(FPD_G FPD_grades, Grade &grade);
 };
 
 #endif
