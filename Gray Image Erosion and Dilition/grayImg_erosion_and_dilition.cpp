@@ -525,7 +525,7 @@ bool Func(unsigned char** &img,
 
 int main() {
 	CImg* pImg = create_image();
-	BOOL rt = pImg->AttachFromFile("..//imgs//code-test-26.bmp");
+	BOOL rt = pImg->AttachFromFile("..//imgs//2DBarCodeTest//01_ref.bmp");
 	if (!rt)
 		return -1;
 
@@ -553,7 +553,8 @@ int main() {
 	const unsigned long MASK_WIDTH = 3;
 	const unsigned long MASK_HEIGHT = 3;
 
-	Func(source, WIDTH, HEIGHT, MASK_WIDTH, MASK_HEIGHT, 1);
+	//for (int i = 0; i < 10; ++i)
+		Func(source, WIDTH, HEIGHT, MASK_WIDTH, MASK_HEIGHT, 0);
 
 	CImg * pPreviewImg = create_image();
 	pPreviewImg->InitArray8(source, HEIGHT, WIDTH);

@@ -314,7 +314,7 @@ OneDBarcodeGrading::~OneDBarcodeGrading() {
 //将图片沿X方向映射，累加灰度值
 bool OneDBarcodeGrading::Func_Mapping(unsigned char** img, vector<long long > &MX, const long width, const long height) {
 	if (img == NULL) return false;
-	if (width == 0 || height == 0)	return true;
+	if (width == 0 || height == 0)	return false;
 	for (long j = 0; j < height; ++j) {
 		long long sum = 0;
 		for (long i = 0; i < width; ++i) {
@@ -760,15 +760,23 @@ bool OneDBarcodeGrading::Func_Scan(const CImg* pImg, unsigned char** img, vector
 				locSet2.push_back(pxset[i]);
 			}
 			locDataSet2.push_back(locSet2);
-			if (pxset)
-				delete pxset;
-			if (pyset)
-				delete pyset;
-			if (pamplitude)
-				delete pamplitude;
-			if (pdistance)
-				delete pdistance;
 			T.push_back(make_pair("Scan - Measure:", clock()));
+		}
+		if (pxset) {
+			delete pxset;
+			pxset = NULL;
+		}
+		if (pyset) {
+			delete pyset;
+			pyset = NULL;
+		}
+		if (pamplitude) {
+			delete pamplitude;
+			pamplitude = NULL;
+		}
+		if (pdistance) {
+			delete pdistance;
+			pdistance = NULL;
 		}
 	}
 
@@ -975,6 +983,7 @@ bool OneDBarcodeGrading::Func_Decodability(vector<vector<float > > locDataSet, O
 
 TwoDBarcodeGrading::TwoDBarcodeGrading() {
 	InitFlag = false;
+	ContrastM = 1.0f;
 }
 
 TwoDBarcodeGrading::~TwoDBarcodeGrading() {
@@ -1125,6 +1134,11 @@ bool TwoDBarcodeGrading::DataMatrixGrading(CImg* pImg, const unsigned int error_
 		source[i] = new unsigned char[width];
 	}
 
+	unsigned char** source_Contrast = new unsigned char*[height];
+	for (unsigned long i = 0; i < height; ++i) {
+		source_Contrast[i] = new unsigned char[width];
+	}
+
 	long** gx = new long*[height];
 	for (unsigned long i = 0; i < height; ++i) {
 		gx[i] = new long[width];
@@ -1150,10 +1164,10 @@ bool TwoDBarcodeGrading::DataMatrixGrading(CImg* pImg, const unsigned int error_
 	memset(aftermx, 0, sizeof(long long)*height);
 	memset(aftermy, 0, sizeof(long long)*width);
 
-	long long *remx = new long long[height];
-	long long *remy = new long long[width];
-	memset(remx, 0, sizeof(long long)*height);
-	memset(remy, 0, sizeof(long long)*width);
+	//long long *remx = new long long[height];
+	//long long *remy = new long long[width];
+	//memset(remx, 0, sizeof(long long)*height);
+	//memset(remy, 0, sizeof(long long)*width);
 
 	//trans
 	for (long j = 0; j < height; ++j) {
@@ -1169,9 +1183,10 @@ bool TwoDBarcodeGrading::DataMatrixGrading(CImg* pImg, const unsigned int error_
 
 	//action
 	double GT;
+	double G_AVG;
 
 	bool rt = true;
-	rt = Func_SC(source, width, height, grade.SC_Score, GT, grade.SC);
+	rt = Func_SC(source, width, height, grade.SC_Score, GT, G_AVG, grade.SC);
 	if (rt == false)
 		return false;
 
@@ -1179,9 +1194,21 @@ bool TwoDBarcodeGrading::DataMatrixGrading(CImg* pImg, const unsigned int error_
 	TIME_SET.push_back(make_pair("Calc SC:", clock()));
 #endif
 
-	rt = Func_Sobel(source, gx, gy, width, height);
+	rt = Func_ContrastControl(source, source_Contrast, G_AVG, ContrastM, width, height);
 	if (rt == false)
 		return false;
+
+#ifdef CALC_TIME
+	TIME_SET.push_back(make_pair("Contrast Control:", clock()));
+#endif
+
+	//rt = Func_Sobel(source, gx, gy, width, height);
+	//if (rt == false)
+	//	return false;
+	rt = Func_Sobel(source_Contrast, gx, gy, width, height);
+	if (rt == false)
+		return false;
+
 
 #ifdef CALC_TIME
 	TIME_SET.push_back(make_pair("Sobel:", clock()));
@@ -1226,12 +1253,25 @@ bool TwoDBarcodeGrading::DataMatrixGrading(CImg* pImg, const unsigned int error_
 	if (rt == false)
 		return false;
 
+
+
 #ifdef CALC_TIME
 	TIME_SET.push_back(make_pair("Compare:", clock()));
 #endif
 
-	vector<vector<unsigned char > > avr;
-	rt = Func_ModuleAvg(source, Xmaxima, Ymaxima, avr, width, height);
+	//rt = Func_EraseSurroundDark(source, Xmaxima, Ymaxima, width, height);
+	//if (rt == false)
+	//	return false;
+	rt = Func_EraseSurroundDark(source_Contrast, Xmaxima, Ymaxima, width, height);
+	if (rt == false)
+		return false;
+
+#ifdef CALC_TIME
+	TIME_SET.push_back(make_pair("Erase Surround Dark:", clock()));
+#endif
+
+	vector<vector<unsigned char > > avg;
+	rt = Func_ModuleAvg(source, Xmaxima, Ymaxima, avg, width, height);
 	if (rt == false)
 		return false;
 
@@ -1239,9 +1279,22 @@ bool TwoDBarcodeGrading::DataMatrixGrading(CImg* pImg, const unsigned int error_
 	TIME_SET.push_back(make_pair("Gray Value AVG:", clock()));
 #endif
 
+	//unsigned char** Table = NULL;
+	//long NEWwidth = 0, NEWheight = 0;
+
+	//rt = Func_CreatArrayFromModuleAvg(avg, GT, NEWwidth, NEWheight, Table);
+
+	//for (int i = 0; i < NEWheight; ++i) {
+	//	for (int j = 0; j < NEWwidth; ++j) {
+	//		cout << (unsigned int)Table[i][j] << " ";
+	//	}
+	//	cout << endl;
+	//}
+
+
 	MOD_DAMIT DataAreaMODInfo;
 	vector<MOD_GIT> MODGradingTable;
-	rt = Func_MOD_DataAreaModulation(avr, DataAreaMODInfo, GT, grade.SC_Score);
+	rt = Func_MOD_DataAreaModulation(avg, DataAreaMODInfo, GT, grade.SC_Score);
 
 #ifdef CALC_TIME
 	TIME_SET.push_back(make_pair("Calc All Modulation:", clock()));
@@ -1305,6 +1358,12 @@ bool TwoDBarcodeGrading::DataMatrixGrading(CImg* pImg, const unsigned int error_
 	}
 	delete[] source;
 	source = NULL;
+
+	for (unsigned long i = 0; i < height; ++i) {
+		delete[] source_Contrast[i];
+	}
+	delete[] source_Contrast;
+	source_Contrast = NULL;
 
 	for (unsigned long i = 0; i < height; ++i) {
 		delete[] gx[i];
@@ -1939,7 +1998,7 @@ unsigned int TwoDBarcodeGrading::_Func_Fpd_TM5_GetHighest_Of_LastColumn(vector<T
 }
 
 //计算SC值
-bool TwoDBarcodeGrading::Func_SC(unsigned char** pBuffer, const long width, const long height, double &SC, double &GT, TwoDBarcodeGrading::GradeSymbol &Grade) {
+bool TwoDBarcodeGrading::Func_SC(unsigned char** pBuffer, const long width, const long height, double &SC, double &GT, double &GAVG, TwoDBarcodeGrading::GradeSymbol &Grade) {
 	if (pBuffer == NULL)
 		return false;
 	if (width == 0 || height == 0)
@@ -1947,11 +2006,18 @@ bool TwoDBarcodeGrading::Func_SC(unsigned char** pBuffer, const long width, cons
 	unsigned long long tab[256];
 	memset(tab, 0, 256 * sizeof(unsigned long long));
 
+	long long G_sum = 0;
+	long G_count = 0;
+
 	for (long i = 0; i < height; ++i) {
 		for (long j = 0; j < width; ++j) {
 			++tab[(unsigned int)pBuffer[i][j]];
+			G_sum += pBuffer[i][j];
+			++G_count;
 		}
 	}
+
+	GAVG = G_sum*1.0 / G_count*1.0;
 
 	unsigned long long limit = 0.1*width*height;
 	unsigned long long count = 0;
@@ -2229,15 +2295,15 @@ bool TwoDBarcodeGrading::Func_ModuleAvg(unsigned char** img, vector<long > Xmaxi
 	long long sum = 0;
 	long count = 0;
 	vector<unsigned char > temp;
-	for each(long j in Xmaxima) {
-		for each(long i in Ymaxima) {
-			for (long y = Ypre; y < j; ++y) {
-				for (long x = Xpre; x < i; ++x) {
+	for (vector<long >::iterator j = Xmaxima.begin(); j < Xmaxima.end(); ++j) {
+		for (vector<long >::iterator i = Ymaxima.begin(); i < Ymaxima.end(); ++i) {
+			for (long y = Ypre; y < *j; ++y) {
+				for (long x = Xpre; x < *i; ++x) {
 					++count;
 					sum += img[y][x];
 				}
 			}
-			Xpre = i + 1;
+			Xpre = *i + 1;
 			if (count != 0) {
 				temp.push_back((unsigned char)(sum / count));
 				sum = 0;
@@ -2249,7 +2315,8 @@ bool TwoDBarcodeGrading::Func_ModuleAvg(unsigned char** img, vector<long > Xmaxi
 				continue;
 			}
 		}
-		Ypre = j + 1;
+		Xpre = 0;
+		Ypre = *j + 1;
 		avr.push_back(temp);
 		temp.clear();
 	}
@@ -2748,4 +2815,412 @@ bool TwoDBarcodeGrading::Func_CalculateFPDAverageGrade(TwoDBarcodeGrading::FPD_G
 		grade.FPD = GradeSymbol::F;
 
 	return true;
+}
+
+#ifdef DRAW_GRID
+bool TwoDBarcodeGrading::__Func_DrawNewCode(CImg* pNewCode, vector<long > Xmaxima, vector<long > Ymaxima, const long width, const long height, const unsigned char brightColor, const unsigned char darkColor) {
+	if (Xmaxima.size() == 0 || Ymaxima.size() == 0)
+		return false;
+	if (width == 0 || height == 0)
+		return false;
+
+	unsigned char** newcode = new unsigned char*[height];
+	for (unsigned long i = 0; i < height; ++i) {
+		newcode[i] = new unsigned char[width];
+	}
+
+	//UNFINISH
+
+
+
+	for (unsigned long i = 0; i < height; ++i) {
+		delete[] newcode[i];
+	}
+	delete[] newcode;
+	newcode = NULL;
+
+	return true;
+
+
+}
+
+#endif
+
+//通过模块像素均值得到信息点的分布
+bool TwoDBarcodeGrading::Func_CreatArrayFromModuleAvg(vector<vector<unsigned char > > AVG, double GT, long &width, long &height, unsigned char** &table) {
+	if (AVG.size() <= 2 || AVG.begin()->size() <= 2)
+		return false;
+
+	long NEWwidth = AVG.begin()->size() - 1;
+	long NEWheight = AVG.size() - 1;
+	if (NEWwidth <= 0 || NEWheight <= 0)
+		return false;
+
+	NEWwidth += 2;
+	NEWheight += 2;
+
+	table = new unsigned char*[NEWheight];
+	for (unsigned long i = 0; i < NEWheight; ++i) {
+		table[i] = new unsigned char[NEWwidth];
+		memset(table[i], 0, NEWwidth * sizeof(unsigned char));
+	}
+
+	width = NEWwidth;
+	height = NEWheight;
+
+	long y = 1;
+	for (vector<vector<unsigned char > >::iterator p = AVG.begin() + 1; p < AVG.end(); ++p, ++y) {
+		if (y >= NEWheight)
+			break;
+		long x = 1;
+		for (vector<unsigned char>::iterator pp = p->begin() + 1; pp < p->end(); ++pp, ++x) {
+			if (x >= NEWwidth)
+				break;
+			if (*pp > GT)
+				table[y][x] = 0;
+			else
+				table[y][x] = 1;
+		}
+	}
+
+	return true;
+}
+
+//根据得到的波峰点位绘制网格
+bool TwoDBarcodeGrading::__Func_DrawLine(unsigned char** img, CImg* &pGridPreview, vector<long > Xmaxima, vector<long > Ymaxima, const long width, const long height, const unsigned char color) {
+	if (img == NULL || Xmaxima.size() == 0 || Ymaxima.size() == 0)
+		return false;
+	unsigned char** preview = new unsigned char*[height];
+	for (unsigned long i = 0; i < height; ++i) {
+		preview[i] = new unsigned char[width];
+	}
+
+	for (unsigned long i = 0; i < height; ++i) {
+		memcpy(preview[i], img[i], width * sizeof(unsigned char));
+	}
+
+	for each(long y in Xmaxima) {
+		for (long i = 0; i < width; ++i) {
+			preview[y][i] = (unsigned char)color;
+		}
+	}
+
+	for each(long x in Ymaxima) {
+		for (long j = 0; j < height; ++j) {
+			preview[j][x] = (unsigned char)color;
+		}
+	}
+	pGridPreview = create_image();
+	pGridPreview->InitArray8(preview, height, width);
+	//bool rt = pGridPreview->SaveToFile("..//results//dqt//Grid.bmp");
+
+
+	for (unsigned long i = 0; i < height; ++i) {
+		delete[] preview[i];
+	}
+	delete[] preview;
+	preview = NULL;
+
+	return true;
+}
+
+//将图片沿X/Y方向映射，累加灰度值
+bool TwoDBarcodeGrading::Func_MappingSrc(unsigned char** img, vector<long long > &MX, vector<long long > &MY, const long width, const long height) {
+	if (img == NULL) return false;
+	if (width == 0 || height == 0)	return false;
+
+	for (long j = 0; j < height; ++j) {
+		long long sum = 0;
+		for (long i = 0; i < width; ++i) {
+			sum += img[j][i];
+		}
+		MX.push_back(sum);
+	}
+
+
+	for (long i = 0; i < width; ++i) {
+		long long sum = 0;
+		for (long j = 0; j < height; ++j) {
+			sum += img[j][i];
+		}
+		MY.push_back(sum);
+	}
+
+	return true;
+}
+
+//将映射后的信号差分
+bool TwoDBarcodeGrading::Func_SrcMappedDifference(vector<long long > MX, vector<long long > MY, vector<long long > &AMX, vector<long long > &AMY, long long &MaxOfAMX, long long &MaxOfAMY) {
+	if (MX.size() <= 1) return false;
+	if (MY.size() <= 1) return false;
+
+	long long xprev = *MX.begin();
+	long long xmax = 0;
+	for (vector<long long >::iterator p = MX.begin(); p != MX.end(); ++p) {
+		//if (p == MX.begin())
+		//	continue;
+		AMX.push_back(*p - xprev);
+
+		if (abs(*p - xprev) > xmax)
+			xmax = abs(*p - xprev);
+		xprev = *p;
+	}
+	MaxOfAMX = xmax;
+
+	long long yprev = *MY.begin();
+	long long ymax = 0;
+	for (vector<long long >::iterator p = MY.begin(); p != MY.end(); ++p) {
+		//if (p == MY.begin())
+		//	continue;
+		AMY.push_back(*p - yprev);
+
+		if (abs(*p - yprev) > ymax)
+			ymax = abs(*p - yprev);
+		yprev = *p;
+	}
+	MaxOfAMX = ymax;
+
+	return true;
+}
+
+bool TwoDBarcodeGrading::Func_EraseSurroundDark(unsigned char** source, vector<long > &Xmaxima, vector<long > &Ymaxima, const long width, const long height) {
+	if (source == NULL)
+		return false;
+	if (Xmaxima.size() == 0 || Ymaxima.size() == 0)
+		return false;
+
+	vector<long long > Src_MX, Src_MY;
+	bool rt = Func_MappingSrc(source, Src_MX, Src_MY, width, height);
+	if (rt == false)
+		return false;
+
+	vector<long long > Src_DMX, Src_DMY;
+	long long MaxOfDMX = 0, MaxOfDMY = 0;
+	rt = Func_SrcMappedDifference(Src_MX, Src_MY, Src_DMX, Src_DMY, MaxOfDMX, MaxOfDMY);
+	if (rt == false)
+		return false;
+
+	vector<long >::iterator pX = Xmaxima.begin();
+	while (pX < Xmaxima.end() && Src_DMX.at(*pX)>0) {
+		++pX;
+	}
+	Xmaxima.erase(Xmaxima.begin(), pX);
+
+	vector<long >::iterator rpX = Xmaxima.end() - 1;
+	while (rpX > Xmaxima.begin() && Src_DMX.at(*rpX) < 0) {
+		--rpX;
+	}
+	Xmaxima.erase(rpX + 1, Xmaxima.end());
+
+	vector<long >::iterator pY = Ymaxima.begin();
+	while (pY < Ymaxima.end() && Src_DMY.at(*pY)>0) {
+		++pY;
+	}
+	Ymaxima.erase(Ymaxima.begin(), pY);
+
+	vector<long >::iterator rpY = Ymaxima.end() - 1;
+	while (rpY > Ymaxima.begin() && Src_DMY.at(*rpY) < 0) {
+		--rpY;
+	}
+	Ymaxima.erase(rpY + 1, Ymaxima.end());
+
+	return true;
+}
+
+//对比度拉伸
+bool TwoDBarcodeGrading::Func_ContrastControl(unsigned char** source, double GAVG, double M, const long width, const long height) {
+	if (source == NULL)
+		return false;
+	if (GAVG == 0 || M == 0 || width == 0 || height == 0)
+		return false;
+
+	for (long j = 0; j < height; ++j) {
+		for (long i = 0; i < width; ++i) {
+			double value = ((double)source[j][i] - GAVG) * M + 127;
+			if (value > 255)
+				value = 255;
+			if (value < 0)
+				value = 0;
+			source[j][i] = (unsigned char)value;
+		}
+	}
+
+	return true;
+}
+
+//对比度拉伸
+bool TwoDBarcodeGrading::Func_ContrastControl(unsigned char** src, unsigned char** &dst, double GAVG, double M, const long width, const long height) {
+	if (src == NULL)
+		return false;
+	if (GAVG == 0 || M == 0 || width == 0 || height == 0)
+		return false;
+
+	for (long j = 0; j < height; ++j) {
+		for (long i = 0; i < width; ++i) {
+			double value = ((double)src[j][i] - GAVG) * M + 127;
+			if (value > 255)
+				value = 255;
+			if (value < 0)
+				value = 0;
+			dst[j][i] = (unsigned char)value;
+		}
+	}
+
+	return true;
+}
+
+bool TwoDBarcodeGrading::GetInfoTable(CImg* pImg, CImg* &dstImg, unsigned char** &InfoTable, long &Twidth, long &Theight) {
+	if (pImg == NULL)
+		return false;
+
+	long width;
+	long height;
+
+	width = pImg->GetWidthPixel();
+	height = pImg->GetHeight();
+
+	//new
+	unsigned char** source = new unsigned char*[height];
+	for (unsigned long i = 0; i < height; ++i) {
+		source[i] = new unsigned char[width];
+	}
+
+	long** gx = new long*[height];
+	for (unsigned long i = 0; i < height; ++i) {
+		gx[i] = new long[width];
+	}
+
+	long** gy = new long*[height];
+	for (unsigned long i = 0; i < height; ++i) {
+		gy[i] = new long[width];
+	}
+
+	double** gradient = new double*[height];
+	for (unsigned long i = 0; i < height; ++i) {
+		gradient[i] = new double[width];
+	}
+
+	long long *mappedx = new long long[height];
+	long long *mappedy = new long long[width];
+	memset(mappedx, 0, sizeof(long long)*height);
+	memset(mappedy, 0, sizeof(long long)*width);
+
+	long long *aftermx = new long long[height];
+	long long *aftermy = new long long[width];
+	memset(aftermx, 0, sizeof(long long)*height);
+	memset(aftermy, 0, sizeof(long long)*width);
+
+	//trans
+	for (long j = 0; j < height; ++j) {
+		for (long i = 0; i < width; ++i) {
+			BYTE* pBuff = pImg->GetPixelAddressRow(j);
+			source[j][i] = pBuff[i];
+		}
+	}
+
+	//action
+	double GT = 0;
+	double G_AVG = 0;
+	double SCScore = 0;
+	GradeSymbol GS;
+
+	bool rt = true;
+	rt = Func_SC(source, width, height, SCScore, GT, G_AVG, GS);
+	if (rt == false)
+		return false;
+
+	rt = Func_ContrastControl(source, G_AVG, ContrastM, width, height);
+	if (rt == false)
+		return false;
+
+	rt = Func_Sobel(source, gx, gy, width, height);
+	if (rt == false)
+		return false;
+
+	rt = Func_Gradient(gx, gy, gradient, width, height);
+	if (rt == false)
+		return false;
+
+	rt = Func_Mapping(gradient, mappedx, mappedy, width, height);
+	if (rt == false)
+		return false;
+
+	const int model[7] = { 5,10,45,50,45,10,5 };
+	const int M = 100;
+	rt = Func_Gauss(mappedx, mappedy, aftermx, aftermy, width, height, model, M);
+	if (rt == false)
+		return false;
+
+	vector<long > Xmaxima, Ymaxima;
+	rt = Func_GetMaxima(aftermx, aftermy, Xmaxima, Ymaxima, width, height);
+	if (rt == false)
+		return false;
+
+	rt = Func_CompareHill(aftermx, aftermy, Xmaxima, Ymaxima, width, height);
+	if (rt == false)
+		return false;
+
+	rt = Func_EraseSurroundDark(source, Xmaxima, Ymaxima, width, height);
+	if (rt == false)
+		return false;
+
+	vector<vector<unsigned char > > avg;
+	rt = Func_ModuleAvg(source, Xmaxima, Ymaxima, avg, width, height);
+	if (rt == false)
+		return false;
+
+	rt = Func_CreatArrayFromModuleAvg(avg, GT, Twidth, Theight, InfoTable);
+	if (rt == false)
+		return false;
+
+	rt = __Func_DrawLine(source, dstImg, Xmaxima, Ymaxima, width, height, (unsigned char)GT);
+	if (rt == false)
+		return false;
+
+	//for (int i = 0; i < Theight; ++i) {
+	//	for (int j = 0; j < Twidth; ++j) {
+	//		cout << (unsigned int)InfoTable[i][j] << " ";
+	//	}
+	//	cout << endl;
+	//}
+
+
+
+	//delete
+	delete mappedx;
+	mappedx = NULL;
+	delete mappedy;
+	mappedy = NULL;
+	delete aftermx;
+	aftermx = NULL;
+	delete aftermy;
+	aftermy = NULL;
+
+	for (unsigned long i = 0; i < height; ++i) {
+		delete[] source[i];
+	}
+	delete[] source;
+	source = NULL;
+
+	for (unsigned long i = 0; i < height; ++i) {
+		delete[] gx[i];
+	}
+	delete[] gx;
+	gx = NULL;
+
+	for (unsigned long i = 0; i < height; ++i) {
+		delete[] gy[i];
+	}
+	delete[] gy;
+	gy = NULL;
+
+	for (unsigned long i = 0; i < height; ++i) {
+		delete[] gradient[i];
+	}
+	delete[] gradient;
+	gradient = NULL;
+
+	return true;
+
+
 }

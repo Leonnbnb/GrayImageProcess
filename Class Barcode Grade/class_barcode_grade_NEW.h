@@ -4,6 +4,7 @@
 #include <vector>
 #include <cmath>
 #include <memory.h>
+#include <algorithm>
 
 #include <ctime>
 #include <string>
@@ -16,7 +17,9 @@
 #pragma  comment(lib, "../Release/hawkvis.lib")
 #endif
 
-#define CALC_TIME //计算消耗时间,结果在控制台下输出,如果非控制台环境,请注释该宏
+//#define CALC_TIME //计算消耗时间,结果在控制台下输出,如果非控制台环境,请注释该宏
+//#define DRAW_GRID
+
 
 using namespace std;
 
@@ -463,6 +466,10 @@ private:
 private:
 	Grade TwoDBarcodeGrade;
 	bool InitFlag;
+	double ContrastM;
+
+public:
+	unsigned char** InfoTable;
 
 public:
 	TwoDBarcodeGrading();
@@ -491,6 +498,19 @@ public:
 	//返回值:是否成功执行（当设置其他数值时将使DECODE级别设置为F,并返回false）
 	bool SetDECODEGrade(int decode_grade);
 
+	//函数功能:设置图像预处理-对比度系数
+	//参数:
+	//M:	系数值
+	//返回值:是否成功执行（当设置数值小于等于0时返回false）
+	bool SetContrastMValue(double M = 1.0f) {
+		if (M > 0) {
+			ContrastM = M;
+			return true;
+		}
+		else
+			return false;
+	}
+
 	//函数功能:获得调制比级别
 	//返回值:-1(图像未初始化).0(F).1(D).2(C).3(B).4(A)
 	int GetSCGrade();
@@ -518,6 +538,8 @@ public:
 	//函数功能:获得译码正确性级别
 	//返回值:-1(图像未初始化).0(F).1(D).2(C).3(B).4(A)
 	int GetDECODEGrade();
+
+	bool GetInfoTable(CImg* pImg, CImg* &dstImg, unsigned char** &InfoTable, long &width, long &height);
 
 private:
 	//DataMatrix 评级
@@ -554,7 +576,7 @@ private:
 	unsigned int _Func_Fpd_TM5_GetHighest_Of_LastColumn(vector<LSAI_SGIT > SGIT);
 
 	//计算SC值
-	bool Func_SC(unsigned char** pBuffer, const long width, const long height, double &SC, double &GT, GradeSymbol &Grade);
+	bool Func_SC(unsigned char** pBuffer, const long width, const long height, double &SC, double &GT, double &GAVG, GradeSymbol &Grade);
 
 	//Sobel算子运算
 	bool Func_Sobel(unsigned char** img, long** &gx, long** &gy, const long width, const long height);
@@ -591,6 +613,34 @@ private:
 
 	//16022 P111 M.1.4 Calculation and grading of average grade(计算L1 L2 QZL1 QZL2 （以及两个Segment区域的最小值）五项的均值再取最小)
 	bool Func_CalculateFPDAverageGrade(FPD_G FPD_grades, Grade &grade);
+
+#ifdef DRAW_GRID
+	//根据波峰点位重新绘制二维码
+	bool __Func_DrawNewCode(CImg* pNewCode, vector<long > Xmaxima, vector<long > Ymaxima, const long width, const long height, const unsigned char brightColor, const unsigned char darkColor);
+
+#endif
+
+	//根据得到的波峰点位绘制网格
+	bool __Func_DrawLine(unsigned char** img, CImg* &pGridPreview, vector<long > Xmaxima, vector<long > Ymaxima, const long width, const long height, const unsigned char color);
+
+	//通过模块像素均值得到信息点的分布
+	bool Func_CreatArrayFromModuleAvg(vector<vector<unsigned char > > AVG, double GT, long &width, long &height, unsigned char** &table);
+
+	//将图片沿X/Y方向映射，累加灰度值
+	bool Func_MappingSrc(unsigned char** img, vector<long long > &MX, vector<long long > &MY, const long width, const long height);
+
+	//将映射后的信号差分
+	bool Func_SrcMappedDifference(vector<long long > MX, vector<long long > MY, vector<long long > &AMX, vector<long long > &AMY, long long &MaxOfAMX, long long &MaxOfAMY);
+
+	//排除周围黑边
+	bool Func_EraseSurroundDark(unsigned char** source, vector<long > &Xmaxima, vector<long > &Ymaxima, const long width, const long height);
+
+	//对比度拉伸(对原图进行操作)
+	bool Func_ContrastControl(unsigned char** source, double GAVG, double M, const long width, const long height);
+
+	//对比度拉伸(不修改原图)
+	bool Func_ContrastControl(unsigned char** src, unsigned char** &dst, double GAVG, double M, const long width, const long height);
+
 };
 
 #endif

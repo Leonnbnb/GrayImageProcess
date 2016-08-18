@@ -17,7 +17,7 @@
 #pragma  comment(lib, "../Release/hawkvis.lib")
 #endif
 
-#define SOBEL_IMG
+//#define SOBEL_IMG
 //#define COUT_MAPPING
 
 using namespace std;
@@ -2189,7 +2189,7 @@ bool Func(CImg* pImg, const unsigned int error_correction_capacity, Grade &grade
 int main() {
 	CImg* pImg = create_image();
 	//BOOL rt = pImg->AttachFromFile("..//imgs//2-1-0.bmp");
-	BOOL rt = pImg->AttachFromFile("..//imgs//TEST02//Fixed Pattern Damage_3_NA_2.bmp");
+	BOOL rt = pImg->AttachFromFile("..//imgs//2-1-0.bmp");
 	//BOOL rt = pImg->AttachFromFile("..//imgs//DST - 160814_192213_0000.bmp");
 	if (!rt)
 		return -1;

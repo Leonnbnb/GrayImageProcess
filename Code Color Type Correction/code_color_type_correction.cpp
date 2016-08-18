@@ -212,7 +212,7 @@ bool Func(CImg* SrcImg, CImg* DstImg) {
 //-----³ÌÐòÈë¿Ú-----
 int main() {
 	CImg* pImg = create_image();
-	BOOL rt = pImg->AttachFromFile("..//imgs//code-test-15.bmp");
+	BOOL rt = pImg->AttachFromFile("..//imgs//2DBarCodeTest//01.bmp");
 	if (!rt)
 		return -1;
 
