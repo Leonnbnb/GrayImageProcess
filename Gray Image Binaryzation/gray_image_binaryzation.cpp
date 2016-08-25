@@ -2,13 +2,13 @@
 #include <vector>
 #include <cmath>//abs()
 #include <memory.h>
-#include <windows.h>//BOOL etc.
 
 //filename
 #include <ctime>
 #include <sstream>
 #include <iomanip>
 
+#include <windows.h>//BOOL etc.
 //CImg
 #include "..//shared//ExtPatternRecognize.h"
 #ifdef _DEBUG
