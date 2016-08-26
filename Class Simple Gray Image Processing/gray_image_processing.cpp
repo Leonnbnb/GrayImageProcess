@@ -107,6 +107,7 @@ bool Gray_Image_Processing::Binaryzation(CImg* pSrcImg, CImg* &pDstImg, unsigned
 		}
 	}
 
+
 	pDstImg = create_image();
 	if (pDstBuffer)
 		pDstImg->InitArray8(pDstBuffer, HEIGHT, WIDTH);
@@ -298,6 +299,202 @@ bool Gray_Image_Processing::Dilition(CImg* pSrcImg, CImg* &pDstImg, unsigned lon
 	}
 	delete[] pBuffer;
 	pBuffer = NULL;
+
+	for (unsigned long i = 0; i < HEIGHT; ++i) {
+		delete[] pDstBuffer[i];
+	}
+	delete[] pDstBuffer;
+	pDstBuffer = NULL;
+
+	m_rl = NULL;
+	m_bRegion = false;
+
+	return true;
+}
+
+bool Gray_Image_Processing::Opening(CImg* pSrcImg, CImg* &pDstImg, unsigned long mask_width, unsigned long mask_height) {
+	if (pSrcImg == NULL)
+	{
+		OutputDebugString("\nERROR: Src Img noexist! --- Opening - 0\n");
+		return false;
+	}
+
+	unsigned char** pBuffer = NULL;
+	unsigned char** pMidBuffer = NULL;
+	unsigned char** pDstBuffer = NULL;
+
+	unsigned long WIDTH = pSrcImg->GetWidthPixel();
+	unsigned long HEIGHT = pSrcImg->GetHeight();
+
+	if (mask_width == 0 || mask_height == 0) {
+		OutputDebugString("\nERROR: Mask size must not be zero! --- Opening - 0\n");
+		return false;
+	}
+
+	if ((mask_width > mask_height ? mask_width : mask_height) >= (WIDTH > HEIGHT ? HEIGHT : WIDTH)) {
+		OutputDebugString("\nERROR: Mask size must smaller than size of image! --- Opening - 0\n");
+		return false;
+	}
+
+	if (mask_width == 1 && mask_height == 1) {
+		OutputDebugString("\nINFO: Mask size is 1 --- Opening - 0\n");
+		pDstImg = create_image(pSrcImg);
+		return true;
+	}
+
+	if (mask_width % 2 == 0) {
+		OutputDebugString("\nINFO: Mask width should be odd --- Opening - 0\n");
+		mask_width = mask_width + 1;
+	}
+	if (mask_height % 2 == 0) {
+		OutputDebugString("\nINFO: Mask height should be odd --- Opening - 0\n");
+		mask_height = mask_height + 1;
+	}
+
+
+	bool ret = false;
+	ret = this->_trans_Gray_CImg_to_Buffer(pSrcImg, pBuffer);
+	if (ret == false || pBuffer == NULL) {
+		OutputDebugString("\nERROR: Trans CImg to Buffer FAILED! --- Opening - 0\n");
+		return false;
+	}
+
+	if (!m_bRegion) {
+		OutputDebugString("\nINFO: Whole image Opening --- Opening - 0\n");
+		ret = _erosion(pBuffer, pMidBuffer, WIDTH, HEIGHT, mask_width, mask_height);
+		ret = _dilition(pMidBuffer, pDstBuffer, WIDTH, HEIGHT, mask_width, mask_height);
+		if (ret == false || pBuffer == NULL) {
+			OutputDebugString("\nERROR: Opening FAILED! --- Opening - 0\n");
+			return false;
+		}
+	}
+	else {
+		OutputDebugString("\nINFO: Region Opening --- Erosion - 0\n");
+		ret = _erosion_region(pBuffer, pMidBuffer, WIDTH, HEIGHT, mask_width, mask_height);
+		ret = _dilition_region(pMidBuffer, pDstBuffer, WIDTH, HEIGHT, mask_width, mask_height);
+		if (ret == false || pBuffer == NULL) {
+			OutputDebugString("\nERROR: Region Opening FAILED! --- Opening - 0\n");
+			return false;
+		}
+	}
+
+	pDstImg = create_image();
+	if (pDstBuffer)
+		pDstImg->InitArray8(pDstBuffer, HEIGHT, WIDTH);
+	else {
+		OutputDebugString("\nERROR: Dst Buffer create FAILED! --- Opening - 0\n");
+		return false;
+	}
+
+	for (unsigned long i = 0; i < HEIGHT; ++i) {
+		delete[] pBuffer[i];
+	}
+	delete[] pBuffer;
+	pBuffer = NULL;
+
+	for (unsigned long i = 0; i < HEIGHT; ++i) {
+		delete[] pMidBuffer[i];
+	}
+	delete[] pMidBuffer;
+	pMidBuffer = NULL;
+
+	for (unsigned long i = 0; i < HEIGHT; ++i) {
+		delete[] pDstBuffer[i];
+	}
+	delete[] pDstBuffer;
+	pDstBuffer = NULL;
+
+	m_rl = NULL;
+	m_bRegion = false;
+
+	return true;
+}
+
+bool Gray_Image_Processing::Closing(CImg* pSrcImg, CImg* &pDstImg, unsigned long mask_width, unsigned long mask_height) {
+	if (pSrcImg == NULL)
+	{
+		OutputDebugString("\nERROR: Src Img noexist! --- Closing - 0\n");
+		return false;
+	}
+
+	unsigned char** pBuffer = NULL;
+	unsigned char** pMidBuffer = NULL;
+	unsigned char** pDstBuffer = NULL;
+
+	unsigned long WIDTH = pSrcImg->GetWidthPixel();
+	unsigned long HEIGHT = pSrcImg->GetHeight();
+
+	if (mask_width == 0 || mask_height == 0) {
+		OutputDebugString("\nERROR: Mask size must not be zero! --- Closing - 0\n");
+		return false;
+	}
+
+	if ((mask_width > mask_height ? mask_width : mask_height) >= (WIDTH > HEIGHT ? HEIGHT : WIDTH)) {
+		OutputDebugString("\nERROR: Mask size must smaller than size of image! --- Closing - 0\n");
+		return false;
+	}
+
+	if (mask_width == 1 && mask_height == 1) {
+		OutputDebugString("\nINFO: Mask size is 1 --- Closing - 0\n");
+		pDstImg = create_image(pSrcImg);
+		return true;
+	}
+
+	if (mask_width % 2 == 0) {
+		OutputDebugString("\nINFO: Mask width should be odd --- Closing - 0\n");
+		mask_width = mask_width + 1;
+	}
+	if (mask_height % 2 == 0) {
+		OutputDebugString("\nINFO: Mask height should be odd --- Closing - 0\n");
+		mask_height = mask_height + 1;
+	}
+
+
+	bool ret = false;
+	ret = this->_trans_Gray_CImg_to_Buffer(pSrcImg, pBuffer);
+	if (ret == false || pBuffer == NULL) {
+		OutputDebugString("\nERROR: Trans CImg to Buffer FAILED! --- Closing - 0\n");
+		return false;
+	}
+
+	if (!m_bRegion) {
+		OutputDebugString("\nINFO: Whole image Closing --- Closing - 0\n");
+		ret = _dilition(pBuffer, pMidBuffer, WIDTH, HEIGHT, mask_width, mask_height);
+		ret = _erosion(pMidBuffer, pDstBuffer, WIDTH, HEIGHT, mask_width, mask_height);
+		if (ret == false || pBuffer == NULL) {
+			OutputDebugString("\nERROR: Closing FAILED! --- Closing - 0\n");
+			return false;
+		}
+	}
+	else {
+		OutputDebugString("\nINFO: Region Closing --- Closing - 0\n");
+		ret = _dilition_region(pBuffer, pMidBuffer, WIDTH, HEIGHT, mask_width, mask_height);
+		ret = _erosion_region(pMidBuffer, pDstBuffer, WIDTH, HEIGHT, mask_width, mask_height);
+		if (ret == false || pBuffer == NULL) {
+			OutputDebugString("\nERROR: Region Closing FAILED! --- Closing - 0\n");
+			return false;
+		}
+	}
+
+	pDstImg = create_image();
+	if (pDstBuffer)
+		pDstImg->InitArray8(pDstBuffer, HEIGHT, WIDTH);
+	else {
+		OutputDebugString("\nERROR: Dst Buffer create FAILED! --- Closing - 0\n");
+		return false;
+	}
+
+	for (unsigned long i = 0; i < HEIGHT; ++i) {
+		delete[] pBuffer[i];
+	}
+	delete[] pBuffer;
+	pBuffer = NULL;
+
+	for (unsigned long i = 0; i < HEIGHT; ++i) {
+		delete[] pMidBuffer[i];
+	}
+	delete[] pMidBuffer;
+	pMidBuffer = NULL;
 
 	for (unsigned long i = 0; i < HEIGHT; ++i) {
 		delete[] pDstBuffer[i];
@@ -617,6 +814,211 @@ bool Gray_Image_Processing::Sharpen(CImg* pSrcImg, CImg* &pDstImg, unsigned long
 
 	m_rl = NULL;
 	m_bRegion = false;
+
+	return true;
+}
+
+bool Gray_Image_Processing::Histogram(CImg* pSrcImg, unsigned long* &Histogram) {
+	if (pSrcImg == NULL)
+	{
+		OutputDebugString("\nERROR: Src Img noexist! --- Histogram - 0\n");
+		return false;
+	}
+
+	unsigned long height = pSrcImg->GetHeight();
+	unsigned long width = pSrcImg->GetWidthPixel();
+
+	Histogram = new unsigned long[256];
+	memset(Histogram, 0, sizeof(unsigned long) * 256);
+
+	unsigned char** pBuffer = NULL;
+
+	bool ret = false;
+	ret = this->_trans_Gray_CImg_to_Buffer(pSrcImg, pBuffer);
+	if (ret == false || pBuffer == NULL) {
+		OutputDebugString("\nERROR: Trans CImg to Buffer FAILED! --- Histogram - 0\n");
+		return false;
+	}
+
+	for (long y = 0; y < height; ++y) {
+		for (long x = 0; x < width; ++x) {
+			++Histogram[pBuffer[y][x]];
+		}
+	}
+
+	return false;
+}
+
+bool Gray_Image_Processing::HistogramToImage(unsigned long* Histogram, CImg* &pCreateImg, const unsigned  char bkgcolor, const unsigned  char forecolor,bool divided) {
+	if (Histogram == NULL) {
+		OutputDebugString("\nERROR: Histogram noexist! --- HistogramToImage - 0\n");
+		return false;
+	}
+
+	//柱体之间的距离
+	const unsigned long stripe_distance = divided;
+	//柱体的宽度
+	const unsigned long stripe_width = 5;
+
+	//整张图片的高度
+	const unsigned long width = 768;
+
+	//图片的宽度
+	const unsigned long height = (stripe_distance + stripe_width) * 256 + 10;
+
+	//每个灰度值柱体的高度
+	unsigned int striplen[256];
+
+	//像素数最大值
+	long pix_max = 0;
+	for (int i = 0; i < 256; ++i) {
+		if (Histogram[i] > pix_max)
+			pix_max = Histogram[i];
+	}
+
+	if (pix_max == 0) {
+		return false;
+	}
+
+	//计算每个像素柱体的高度
+	for (int i = 0; i < 256; ++i) {
+		double rate = Histogram[i] * 1.0 / pix_max*1.0;
+		striplen[i] = (unsigned int)(1.0 * width * rate * 0.95 - 0.5);
+	}
+
+	unsigned char** pBuffer = new unsigned char*[height];
+	for (unsigned long i = 0; i < height; ++i) {
+		pBuffer[i] = new unsigned char[width];
+	}
+
+	for (unsigned long i = 0; i < height; ++i) {
+		memset(pBuffer[i], bkgcolor, sizeof(unsigned char)*width);
+	}
+
+	unsigned char no = 0;
+	unsigned char flag = 0;
+	for (unsigned long i = 5; i < height - 5; ++i) {
+
+		//if (flag < stripe_width) {
+		if (flag >= stripe_width) {
+			++no;
+			if (no == 256)
+				break;
+			flag = 0;
+			if (stripe_distance != 0)
+				continue;
+			//}
+		}
+		int len = striplen[no] > width ? width : striplen[no];
+		memset(pBuffer[i], forecolor, sizeof(unsigned char)*len);
+		++flag;
+		//}
+		//else {
+	}
+
+	unsigned char** pRotateBuffer = NULL;
+	_rotate_left(pBuffer, pRotateBuffer, width, height);
+
+	pCreateImg = create_image();
+	pCreateImg->InitArray8(pRotateBuffer, width, height);//图像旋转后SrcBuffer的宽度为DstBuffer的高度
+
+	return true;
+}
+
+bool Gray_Image_Processing::RotateLeft(CImg* pSrcImg, CImg* &pDstImg) {
+	if (pSrcImg == NULL)
+	{
+		OutputDebugString("\nERROR: Src Img noexist! --- RotateLeft - 0\n");
+		return false;
+	}
+
+	unsigned char** pBuffer = NULL;
+	unsigned char** pDstBuffer = NULL;
+
+	unsigned long WIDTH = pSrcImg->GetWidthPixel();
+	unsigned long HEIGHT = pSrcImg->GetHeight();
+
+	bool ret = false;
+	ret = this->_trans_Gray_CImg_to_Buffer(pSrcImg, pBuffer);
+	if (ret == false || pBuffer == NULL) {
+		OutputDebugString("\nERROR: Trans CImg to Buffer FAILED! --- RotateLeft - 0\n");
+		return false;
+	}
+
+	ret = _rotate_left(pBuffer, pDstBuffer, WIDTH, HEIGHT);
+	if (ret == false || pBuffer == NULL) {
+		OutputDebugString("\nERROR: RotateLeft FAILED! --- RotateLeft - 0\n");
+		return false;
+	}
+
+	pDstImg = create_image();
+	if (pDstBuffer)
+		pDstImg->InitArray8(pDstBuffer, WIDTH, HEIGHT);//图像旋转后必须将目标图像的宽高互换
+	else {
+		OutputDebugString("\nERROR: Dst Buffer create FAILED! --- RotateLeft - 0\n");
+		return false;
+	}
+
+	for (unsigned long i = 0; i < HEIGHT; ++i) {
+		delete[] pBuffer[i];
+	}
+	delete[] pBuffer;
+	pBuffer = NULL;
+
+	for (unsigned long i = 0; i < WIDTH; ++i) {//图像旋转后SrcBuffer的宽度为DstBuffer的高度
+		delete[] pDstBuffer[i];
+	}
+	delete[] pDstBuffer;
+	pDstBuffer = NULL;
+
+	return true;
+}
+
+bool Gray_Image_Processing::RotateRight(CImg* pSrcImg, CImg* &pDstImg) {
+	if (pSrcImg == NULL)
+	{
+		OutputDebugString("\nERROR: Src Img noexist! --- RotateRight - 0\n");
+		return false;
+	}
+
+	unsigned char** pBuffer = NULL;
+	unsigned char** pDstBuffer = NULL;
+
+	unsigned long WIDTH = pSrcImg->GetWidthPixel();
+	unsigned long HEIGHT = pSrcImg->GetHeight();
+
+	bool ret = false;
+	ret = this->_trans_Gray_CImg_to_Buffer(pSrcImg, pBuffer);
+	if (ret == false || pBuffer == NULL) {
+		OutputDebugString("\nERROR: Trans CImg to Buffer FAILED! --- RotateRight - 0\n");
+		return false;
+	}
+
+	ret = _rotate_right(pBuffer, pDstBuffer, WIDTH, HEIGHT);
+	if (ret == false || pBuffer == NULL) {
+		OutputDebugString("\nERROR: RotateLeft FAILED! --- RotateRight - 0\n");
+		return false;
+	}
+
+	pDstImg = create_image();
+	if (pDstBuffer)
+		pDstImg->InitArray8(pDstBuffer, WIDTH, HEIGHT);//图像旋转后必须将目标图像的宽高互换
+	else {
+		OutputDebugString("\nERROR: Dst Buffer create FAILED! --- RotateRight - 0\n");
+		return false;
+	}
+
+	for (unsigned long i = 0; i < HEIGHT; ++i) {
+		delete[] pBuffer[i];
+	}
+	delete[] pBuffer;
+	pBuffer = NULL;
+
+	for (unsigned long i = 0; i < WIDTH; ++i) {//图像旋转后SrcBuffer的宽度为DstBuffer的高度
+		delete[] pDstBuffer[i];
+	}
+	delete[] pDstBuffer;
+	pDstBuffer = NULL;
 
 	return true;
 }
@@ -2383,6 +2785,46 @@ bool Gray_Image_Processing::_sharpen_region(unsigned char** pSrc, unsigned char*
 	}
 	delete[] pDiffer;
 	pDiffer = NULL;
+
+	return true;
+}
+
+bool Gray_Image_Processing::_rotate_left(unsigned char** pSrc, unsigned char** &pDst, unsigned long width, unsigned long height) {
+	if (pSrc == NULL) {
+		OutputDebugString("\nERROR: Src Img noexist! --- TrunLeft - 1\n");
+		return false;
+	}
+
+	pDst = new unsigned char*[width];
+	for (unsigned long i = 0; i < width; ++i) {
+		pDst[i] = new unsigned char[height];
+	}
+
+	for (long y = 0; y < height; ++y) {
+		for (long x = 0; x < width; ++x) {
+			pDst[(width - 1) - x][y] = pSrc[y][x];
+		}
+	}
+
+	return true;
+}
+
+bool Gray_Image_Processing::_rotate_right(unsigned char** pSrc, unsigned char** &pDst, unsigned long width, unsigned long height) {
+	if (pSrc == NULL) {
+		OutputDebugString("\nERROR: Src Img noexist! --- TrunRight - 1\n");
+		return false;
+	}
+
+	pDst = new unsigned char*[width];
+	for (unsigned long i = 0; i < width; ++i) {
+		pDst[i] = new unsigned char[height];
+	}
+
+	for (long y = 0; y < height; ++y) {
+		for (long x = 0; x < width; ++x) {
+			pDst[x][(height - 1) - y] = pSrc[y][x];
+		}
+	}
 
 	return true;
 }

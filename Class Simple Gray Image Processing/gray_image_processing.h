@@ -15,9 +15,7 @@
 #pragma  comment(lib, "../Release/hawkvis.lib")
 #endif
 
-#define CALC_TIME
-
-class Gray_Image_Processing
+class Gray_Image_Processing final
 {
 private:
 	Hrlregion *m_rl;
@@ -33,7 +31,7 @@ public:
 ---------------------------------------------------接口函数-----------------------------------------------------
 ------------------------------------------------------------------------------------------------------------*/
 public:
-	//函数功能:设置执行图像处理的区域
+	//函数功能: 设置执行图像处理的区域
 	//参数:
 	//Hrlregion *region: 区域
 	//返回值:是否成功执行
@@ -42,7 +40,7 @@ public:
 	//函数功能:清除执行图像处理的区域
 	void ClearRegion();
 
-	//函数功能:二值化
+	//函数功能: 二值化
 	//参数:
 	//CImg* pSrcImg: 源图像
 	//CImg* &pDstImg: 目标图像
@@ -50,7 +48,7 @@ public:
 	//返回值:是否成功执行
 	bool Binaryzation(CImg* pSrcImg, CImg* &pDstImg, unsigned char threshold = 0x7F/*127*/);
 
-	//函数功能:灰度腐蚀
+	//函数功能: 灰度腐蚀
 	//参数:
 	//CImg* pSrcImg: 源图像
 	//CImg* &pDstImg: 目标图像
@@ -59,7 +57,7 @@ public:
 	//返回值:是否成功执行
 	bool Erosion(CImg* pSrcImg, CImg* &pDstImg, unsigned long mask_width, unsigned long mask_height);
 
-	//函数功能:灰度膨胀
+	//函数功能: 灰度膨胀
 	//参数:
 	//CImg* pSrcImg: 源图像
 	//CImg* &pDstImg: 目标图像
@@ -68,7 +66,29 @@ public:
 	//返回值:是否成功执行
 	bool Dilition(CImg* pSrcImg, CImg* &pDstImg, unsigned long mask_width, unsigned long mask_height);
 
-	//函数功能:中值滤波
+	//函数功能: 开运算(先腐蚀再膨胀)
+	//参数:
+	//CImg* pSrcImg: 源图像
+	//CImg* &pDstImg: 目标图像
+	//unsigned long mask_width: 模板宽度
+	//unsigned long mask_height: 模板高度
+	//返回值:是否成功执行
+	//说明:
+	//消除小物体,在纤细点处分离物体,平滑较大物体的边界的同时并不明显改变其面积
+	bool Opening(CImg* pSrcImg, CImg* &pDstImg, unsigned long mask_width = 3, unsigned long mask_height = 3);
+
+	//函数功能: 闭运算(先膨胀再腐蚀)
+	//参数:
+	//CImg* pSrcImg: 源图像
+	//CImg* &pDstImg: 目标图像
+	//unsigned long mask_width: 模板宽度
+	//unsigned long mask_height: 模板高度
+	//返回值:是否成功执行
+	//说明:
+	//填充物体内细小空洞,连接邻近物体,平滑其边界的同时并不明显改变其面积
+	bool Closing(CImg* pSrcImg, CImg* &pDstImg, unsigned long mask_width = 3, unsigned long mask_height = 3);
+
+	//函数功能: 中值滤波
 	//参数:
 	//CImg* pSrcImg: 源图像
 	//CImg* &pDstImg: 目标图像
@@ -77,7 +97,7 @@ public:
 	//返回值:是否成功执行
 	bool MedianFilter(CImg* pSrcImg, CImg* &pDstImg, unsigned long mask_width, unsigned long mask_height);
 
-	//函数功能:均值滤波
+	//函数功能: 均值滤波
 	//参数:
 	//CImg* pSrcImg: 源图像
 	//CImg* &pDstImg: 目标图像
@@ -86,7 +106,7 @@ public:
 	//返回值:是否成功执行
 	bool MeanFilter(CImg* pSrcImg, CImg* &pDstImg, unsigned long mask_width, unsigned long mask_height);
 
-	//函数功能:对比度调整
+	//函数功能: 对比度调整
 	//参数:
 	//CImg* pSrcImg: 源图像
 	//CImg* &pDstImg: 目标图像
@@ -94,7 +114,7 @@ public:
 	//返回值:是否成功执行
 	bool Contrast(CImg* pSrcImg, CImg* &pDstImg, double M = 1);
 
-	//函数功能:锐化
+	//函数功能: 锐化
 	//参数:
 	//CImg* pSrcImg: 源图像
 	//CImg* &pDstImg: 目标图像
@@ -104,9 +124,40 @@ public:
 	//返回值:是否成功执行
 	bool Sharpen(CImg* pSrcImg, CImg* &pDstImg, unsigned long mask_width, unsigned long mask_height, double M = 0);
 
-/*------------------------------------------------------------------------------------------------------------
----------------------------------------------------功能实现-----------------------------------------------------
-------------------------------------------------------------------------------------------------------------*/
+	//函数功能: 求全图直方图
+	//参数:
+	//CImg* pSrcImg: 源图像
+	//unsigned long* &Histogram: 直方图
+	//返回值:是否成功执行
+	bool Histogram(CImg* pSrcImg, unsigned long* &Histogram);
+
+	//函数功能: 由直方图生成图片
+	//参数:
+	//unsigned long* Histogram: 直方图
+	//CImg* pCreateImg: 目标图像
+	//const unsigned  char bkgcolor: 背景色(默认为白)
+	//const unsigned  char forecolor: 柱体色(默认为黑)
+	//bool divided: 柱体之间是否有间隔(默认有间隔)
+	//返回值:是否成功执行
+	bool HistogramToImage(unsigned long* Histogram, CImg* &pCreateImg, const unsigned  char bkgcolor = 0xFF, const unsigned  char forecolor = 0, bool divided = true);
+
+	//函数功能: 将整幅图像逆时针旋转90°
+	//参数:
+	//CImg* pSrcImg: 源图像
+	//CImg* &pDstImg: 目标图像
+	//返回值:是否成功执行
+	bool RotateLeft(CImg* pSrcImg, CImg* &pDstImg);
+
+	//函数功能: 将整幅图像顺时针旋转90°
+	//参数:
+	//CImg* pSrcImg: 源图像
+	//CImg* &pDstImg: 目标图像
+	//返回值:是否成功执行
+	bool RotateRight(CImg* pSrcImg, CImg* &pDstImg);
+
+	/*------------------------------------------------------------------------------------------------------------
+	---------------------------------------------------功能实现-----------------------------------------------------
+	------------------------------------------------------------------------------------------------------------*/
 private:
 	//将CImg对象转换为Buffer数组
 	bool _trans_Gray_CImg_to_Buffer(CImg* pImg, unsigned char** &pBuffer);
@@ -156,9 +207,15 @@ private:
 	//指定区域锐化
 	bool _sharpen_region(unsigned char** pSrc, unsigned char** &pDst, unsigned long width, unsigned long height, unsigned long mask_width, unsigned long mask_height, double M);
 
-/*------------------------------------------------------------------------------------------------------------
----------------------------------------------------实现组件-----------------------------------------------------
-------------------------------------------------------------------------------------------------------------*/
+	//逆时针旋转90度
+	bool _rotate_left(unsigned char** pSrc, unsigned char** &pDst, unsigned long width, unsigned long height);
+
+	//顺时针旋转90度
+	bool _rotate_right(unsigned char** pSrc, unsigned char** &pDst, unsigned long width, unsigned long height);
+
+	/*------------------------------------------------------------------------------------------------------------
+	---------------------------------------------------实现组件-----------------------------------------------------
+	------------------------------------------------------------------------------------------------------------*/
 private:
 	//获得周围像素值
 	//此函数在牺牲执行效率的情况下换取获得模板区域像素值的通用性
