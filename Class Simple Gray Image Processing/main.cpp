@@ -5,11 +5,12 @@
 
 using namespace std;
 
+
 int main() {
 
 	Gray_Image_Processing action;
 	CImg* pImg = create_image();
-	BOOL rt = pImg->AttachFromFile("..//imgs//code-test-3.bmp");
+	BOOL rt = pImg->AttachFromFile("..//imgs//1.bmp");
 	//BOOL rt = pImg->AttachFromFile("..//results//binaryzation//DST.bmp");
 	if (!rt)
 		return -1;
@@ -23,14 +24,8 @@ int main() {
 
 	begin = clock();
 
-	bool ret = action.MedianFilter(pImg, himg, 3, 3);
+	bool ret = action.Scaling(pImg, himg, 1.0 / 4.0, Gray_Image_Processing::SCALING_METHOD::SC_NONE);
 
-	//bool ret = action.Histogram(pImg, hitgram);
-	//ret = action.HistogramToImage(hitgram, himg,0x44,0xFF);
-
-
-	//bool ret =mean_image(*pImg, 0, 0, pImg->GetWidthByte(), pImg->GetHeight(), 3, 3);
-	//bool ret = action.Erosion(pImg, img, 3, 3);
 	end = clock();
 
 	cout << (unsigned int)(end - begin) << endl;

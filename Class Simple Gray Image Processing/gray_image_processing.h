@@ -27,20 +27,20 @@ public:
 
 	//0x0010
 	typedef enum BINARYZATION_METHOD {
-		NONE = 0x0010,
+		BI_NONE = 0x0010,
 
 	};
 
 	//0x0020
 	typedef enum SCALING_METHOD {
-		NONE = 0x0020,
-		NEAREST_NEIGHBOR,
-		BILINEAR,
-		BICUBIC,
-		FOURIER_BASED,
-		EDGE_DIRECTED,
-		HQX,
-		VECTORIZATION
+		SC_NONE = 0x0020,
+		SC_NEAREST_NEIGHBOR,
+		SC_BILINEAR,
+		SC_BICUBIC,
+		SC_FOURIER_BASED,
+		SC_EDGE_DIRECTED,
+		SC_HQX,
+		SC_VECTORIZATION
 	};
 
 	//bool TestGetSurroundPixel(CImg* pSrcImg, unsigned long x, unsigned long y, unsigned long mask_width, unsigned long mask_height);

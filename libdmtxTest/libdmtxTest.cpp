@@ -24,7 +24,7 @@ int main() {
 
 	CImg* pImg = create_image();
 	//BOOL rt = pImg->AttachFromFile("..//imgs//barcodes//barcode-test-66.bmp");
-	BOOL rt = pImg->AttachFromFile("..//imgs//code-test-23.bmp");
+	BOOL rt = pImg->AttachFromFile("..//imgs//DST5.bmp");
 	if (!rt)
 		return -1;
 

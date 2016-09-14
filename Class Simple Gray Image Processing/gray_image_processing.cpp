@@ -1,5 +1,8 @@
 ﻿#include "gray_image_processing.h"
 
+
+#define CALC_TIME
+
 #ifdef CALC_TIME
 #include <iostream>
 #include <ctime>
@@ -1029,7 +1032,7 @@ bool Gray_Image_Processing::Scaling(CImg* pSrcImg, CImg* &pDstImg, double rate, 
 		return false;
 	}
 
-	if (method == SCALING_METHOD::NONE && rate > 1) {
+	if (method == SCALING_METHOD::SC_NONE && rate > 1) {
 		OutputDebugString("\nERROR: Rate cannot greater than 1 when use NONE method! --- Scaling - 0\n");
 		return false;
 	}
@@ -1041,7 +1044,7 @@ bool Gray_Image_Processing::Scaling(CImg* pSrcImg, CImg* &pDstImg, double rate, 
 	}
 
 	switch (method) {
-	case SCALING_METHOD::NONE: {
+	case SCALING_METHOD::SC_NONE: {
 		unsigned char** pBuffer = NULL;
 		unsigned char** pDstBuffer = NULL;
 
@@ -1060,10 +1063,13 @@ bool Gray_Image_Processing::Scaling(CImg* pSrcImg, CImg* &pDstImg, double rate, 
 		int HEIGHT_NEW = HEIGHT / piece;
 
 		bool ret = false;
+		ret = this->_trans_Gray_CImg_to_Buffer(pSrcImg, pBuffer);
+		if (ret == false || pBuffer == NULL) {
+			OutputDebugString("\nERROR: Trans CImg to Buffer FAILED! --- Scaling - 0\n");
+			return false;
+		}
 
-		//TODO:
-
-
+		_scaling_none(pBuffer, pDstBuffer, WIDTH, HEIGHT, WIDTH_NEW, HEIGHT_NEW, piece, piece - 1);
 
 		pDstImg = create_image();
 		if (pDstBuffer)
@@ -1079,7 +1085,7 @@ bool Gray_Image_Processing::Scaling(CImg* pSrcImg, CImg* &pDstImg, double rate, 
 		delete[] pBuffer;
 		pBuffer = NULL;
 
-		for (unsigned long i = 0; i < HEIGHT; ++i) {
+		for (unsigned long i = 0; i < HEIGHT_NEW; ++i) {
 			delete[] pDstBuffer[i];
 		}
 		delete[] pDstBuffer;
@@ -1119,8 +1125,8 @@ bool Gray_Image_Processing::_trans_Gray_CImg_to_Buffer(CImg* pImg, unsigned char
 	}
 
 	for (long y = 0; y < HEIGHT; ++y) {
+		BYTE* pBuff = pImg->GetPixelAddressRow(y);
 		for (long x = 0; x < WIDTH; ++x) {
-			BYTE* pBuff = pImg->GetPixelAddressRow(y);
 			pBuffer[y][x] = pBuff[x];
 		}
 	}
@@ -2927,28 +2933,29 @@ bool Gray_Image_Processing::_scaling_none(unsigned char** pSrc, unsigned char** 
 
 	unsigned char** pMid = new unsigned char*[height_dst];
 	for (unsigned long i = 0; i < height_dst; ++i) {
-		pDst[i] = new unsigned char[width_src];
+		pMid[i] = new unsigned char[width_src];
 	}
 
 	unsigned long mid_row_index = 0;
 	for (unsigned long row_index = 0; row_index < height_src; ++row_index) {
 		if (row_index % piece_size == selected) {
-			if (mid_row_index >= height_dst) break;
+			if (mid_row_index >= height_dst)
+				break;
 			memcpy(pMid[mid_row_index++], pSrc[row_index], width_src * sizeof(unsigned char));
 		}
-		else
-			continue;
 	}
 
 	unsigned long dst_col_index = 0;
 	for (unsigned long col_index = 0; col_index < width_src; ++col_index) {
 		if (col_index % piece_size == selected) {
+			if (dst_col_index >= width_dst)
+				break;
 			for (unsigned long tmp_index = 0; tmp_index < height_dst; ++tmp_index) {
-
+				pDst[tmp_index][dst_col_index] = pMid[tmp_index][col_index];
 			}
+			++dst_col_index;
 		}
 	}
-
 
 	for (unsigned long i = 0; i < height_dst; ++i) {
 		delete[] pMid[i];
@@ -2956,7 +2963,5 @@ bool Gray_Image_Processing::_scaling_none(unsigned char** pSrc, unsigned char** 
 	delete[] pMid;
 	pMid = NULL;
 
-
 	return true;
-
 }
