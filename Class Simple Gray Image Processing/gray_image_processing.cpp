@@ -1,7 +1,6 @@
 ﻿#include "gray_image_processing.h"
 
-
-#define CALC_TIME
+//#define CALC_TIME
 
 #ifdef CALC_TIME
 #include <iostream>
@@ -1018,6 +1017,105 @@ bool Gray_Image_Processing::RotateRight(CImg* pSrcImg, CImg* &pDstImg) {
 	pBuffer = NULL;
 
 	for (unsigned long i = 0; i < WIDTH; ++i) {//图像旋转后SrcBuffer的宽度为DstBuffer的高度
+		delete[] pDstBuffer[i];
+	}
+	delete[] pDstBuffer;
+	pDstBuffer = NULL;
+
+	return true;
+}
+
+bool Gray_Image_Processing::FlipHorizontal(CImg* pSrcImg, CImg* &pDstImg) {
+	if (pSrcImg == NULL)
+	{
+		OutputDebugString("\nERROR: Src Img noexist! --- FlipHorizontal - 0\n");
+		return false;
+	}
+
+	unsigned char** pBuffer = NULL;
+	unsigned char** pDstBuffer = NULL;
+
+	unsigned long WIDTH = pSrcImg->GetWidthPixel();
+	unsigned long HEIGHT = pSrcImg->GetHeight();
+
+	bool ret = false;
+	ret = this->_trans_Gray_CImg_to_Buffer(pSrcImg, pBuffer);
+	if (ret == false || pBuffer == NULL) {
+		OutputDebugString("\nERROR: Trans CImg to Buffer FAILED! --- FlipHorizontal - 0\n");
+		return false;
+	}
+
+	ret = _flip_horizontal(pBuffer, pDstBuffer, WIDTH, HEIGHT);
+	if (ret == false || pBuffer == NULL) {
+		OutputDebugString("\nERROR: Flip Horizontal FAILED! --- FlipHorizontal - 0\n");
+		return false;
+	}
+
+	pDstImg = create_image();
+	if (pDstBuffer)
+		pDstImg->InitArray8(pDstBuffer, HEIGHT, WIDTH);
+	else {
+		OutputDebugString("\nERROR: Dst Buffer create FAILED! --- FlipHorizontal - 0\n");
+		return false;
+	}
+
+	for (unsigned long i = 0; i < HEIGHT; ++i) {
+		delete[] pBuffer[i];
+	}
+	delete[] pBuffer;
+	pBuffer = NULL;
+
+	for (unsigned long i = 0; i < HEIGHT; ++i) {
+		delete[] pDstBuffer[i];
+	}
+	delete[] pDstBuffer;
+	pDstBuffer = NULL;
+
+	return true;
+}
+
+bool Gray_Image_Processing::FlipVertical(CImg* pSrcImg, CImg* &pDstImg) {
+	if (pSrcImg == NULL)
+	{
+		OutputDebugString("\nERROR: Src Img noexist! --- FlipVertical - 0\n");
+		return false;
+	}
+
+	unsigned char** pBuffer = NULL;
+	unsigned char** pDstBuffer = NULL;
+
+	unsigned long WIDTH = pSrcImg->GetWidthPixel();
+	unsigned long HEIGHT = pSrcImg->GetHeight();
+
+	bool ret = false;
+	ret = this->_trans_Gray_CImg_to_Buffer(pSrcImg, pBuffer);
+	if (ret == false || pBuffer == NULL) {
+		OutputDebugString("\nERROR: Trans CImg to Buffer FAILED! --- FlipVertical - 0\n");
+		return false;
+	}
+
+	ret = _flip_vertical(pBuffer, pDstBuffer, WIDTH, HEIGHT);
+
+	if (ret == false || pBuffer == NULL) {
+		OutputDebugString("\nERROR: Flip Vertical FAILED! --- FlipVertical - 0\n");
+		return false;
+	}
+
+	pDstImg = create_image();
+	if (pDstBuffer)
+		pDstImg->InitArray8(pDstBuffer, HEIGHT, WIDTH);
+	else {
+		OutputDebugString("\nERROR: Dst Buffer create FAILED! --- FlipVertical - 0\n");
+		return false;
+	}
+
+	for (unsigned long i = 0; i < HEIGHT; ++i) {
+		delete[] pBuffer[i];
+	}
+	delete[] pBuffer;
+	pBuffer = NULL;
+
+	for (unsigned long i = 0; i < HEIGHT; ++i) {
 		delete[] pDstBuffer[i];
 	}
 	delete[] pDstBuffer;
@@ -2964,4 +3062,45 @@ bool Gray_Image_Processing::_scaling_none(unsigned char** pSrc, unsigned char** 
 	pMid = NULL;
 
 	return true;
+}
+
+bool Gray_Image_Processing::_flip_horizontal(unsigned char** pSrc, unsigned char** &pDst, unsigned long width, unsigned long height) {
+	if (pSrc == NULL) {
+		OutputDebugString("\nERROR: Src Img noexist! --- FlipHorizontal - 1\n");
+		return false;
+	}
+
+	pDst = new unsigned char*[height];
+	for (unsigned long i = 0; i < height; ++i) {
+		pDst[i] = new unsigned char[width];
+	}
+
+	for (unsigned long row_index = 0; row_index < height; ++row_index) {
+		for (unsigned long col_index = 0; col_index < width; ++col_index) {
+			pDst[row_index][col_index] = pSrc[row_index][width - 1 - col_index];
+		}
+	}
+
+	return true;
+}
+
+bool Gray_Image_Processing::_flip_vertical(unsigned char** pSrc, unsigned char** &pDst, unsigned long width, unsigned long height) {
+	if (pSrc == NULL) {
+		OutputDebugString("\nERROR: Src Img noexist! --- FlipVertical - 1\n");
+		return false;
+	}
+
+	pDst = new unsigned char*[height];
+	for (unsigned long i = 0; i < height; ++i) {
+		pDst[i] = new unsigned char[width];
+	}
+
+	for (unsigned long col_index = 0; col_index < width; ++col_index) {
+		for (unsigned long row_index = 0; row_index < height; ++row_index) {
+			pDst[row_index][col_index] = pSrc[height - 1 - row_index][col_index];
+		}
+	}
+
+	return true;
+
 }

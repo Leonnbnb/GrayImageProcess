@@ -24,7 +24,8 @@ int main() {
 
 	begin = clock();
 
-	bool ret = action.Scaling(pImg, himg, 1.0 / 4.0, Gray_Image_Processing::SCALING_METHOD::SC_NONE);
+	//bool ret = action.Scaling(pImg, himg, 1.0 / 4.0, Gray_Image_Processing::SCALING_METHOD::SC_NONE);
+	bool ret = action.FlipVertical(pImg, himg);
 
 	end = clock();
 

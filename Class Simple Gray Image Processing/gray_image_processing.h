@@ -182,6 +182,20 @@ public:
 	//返回值:是否成功执行
 	bool Scaling(CImg* pSrcImg, CImg* &pDstImg, double rate, SCALING_METHOD method);
 
+	//函数功能: 将整幅图像水平翻转
+	//参数:
+	//CImg* pSrcImg: 源图像
+	//CImg* &pDstImg: 目标图像
+	//返回值:是否成功执行
+	bool FlipHorizontal(CImg* pSrcImg, CImg* &pDstImg);
+
+	//函数功能: 将整幅图像垂直翻转
+	//参数:
+	//CImg* pSrcImg: 源图像
+	//CImg* &pDstImg: 目标图像
+	//返回值:是否成功执行
+	bool FlipVertical(CImg* pSrcImg, CImg* &pDstImg);
+
 	/*------------------------------------------------------------------------------------------------------------
 	---------------------------------------------------功能实现-----------------------------------------------------
 	------------------------------------------------------------------------------------------------------------*/
@@ -242,6 +256,12 @@ private:
 
 	//无插值缩小图像
 	bool _scaling_none(unsigned char** pSrc, unsigned char** &pDst, unsigned long width_src, unsigned long height_src, unsigned long width_dst, unsigned long height_dst, int piece_size, int selected);
+
+	//水平翻转图像
+	bool _flip_horizontal(unsigned char** pSrc, unsigned char** &pDst, unsigned long width, unsigned long height);
+
+	//垂直翻转图像
+	bool _flip_vertical(unsigned char** pSrc, unsigned char** &pDst, unsigned long width, unsigned long height);
 
 	/*------------------------------------------------------------------------------------------------------------
 	---------------------------------------------------实现组件-----------------------------------------------------
