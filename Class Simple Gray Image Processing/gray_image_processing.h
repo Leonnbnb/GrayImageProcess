@@ -196,6 +196,24 @@ public:
 	//返回值:是否成功执行
 	bool FlipVertical(CImg* pSrcImg, CImg* &pDstImg);
 
+	//函数功能: 裁切指定矩形区域
+	//参数:
+	//CImg* pSrcImg: 源图像
+	//CImg* &pDstImg: 目标图像
+	//unsigned long leftTop_x: 矩形的左上角顶点X坐标
+	//unsigned long leftTop_y: 矩形的左上角顶点Y坐标
+	//unsigned long clip_width: 矩形的宽度
+	//unsigned long clip_height: 矩形的高度
+	//返回值:是否成功执行
+	bool ClipRectangle(CImg* pSrcImg, CImg* &pDstImg, long leftTop_x, long leftTop_y, unsigned long clip_width, unsigned long clip_height);
+
+	//函数功能: 裁切指定区域
+	//参数:
+	//CImg* pSrcImg: 源图像
+	//CImg* &pDstImg: 目标图像
+	//返回值:是否成功执行
+	bool ClipRegion(CImg* pSrcImg, CImg* &pDstImg);
+
 	/*------------------------------------------------------------------------------------------------------------
 	---------------------------------------------------功能实现-----------------------------------------------------
 	------------------------------------------------------------------------------------------------------------*/
@@ -262,6 +280,9 @@ private:
 
 	//垂直翻转图像
 	bool _flip_vertical(unsigned char** pSrc, unsigned char** &pDst, unsigned long width, unsigned long height);
+
+	//裁切矩形区域
+	bool _clip_rectangle(unsigned char** pSrc, unsigned char** &pDst, long leftTop_x, long leftTop_y, unsigned long width_src, unsigned long height_src, unsigned long &width_dst, unsigned long &height_dst);
 
 	/*------------------------------------------------------------------------------------------------------------
 	---------------------------------------------------实现组件-----------------------------------------------------

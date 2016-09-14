@@ -1197,6 +1197,68 @@ bool Gray_Image_Processing::Scaling(CImg* pSrcImg, CImg* &pDstImg, double rate, 
 	}
 }
 
+bool Gray_Image_Processing::ClipRectangle(CImg* pSrcImg, CImg* &pDstImg, long leftTop_x, long leftTop_y, unsigned long clip_width, unsigned long clip_height) {
+	if (clip_height == 0 || clip_width == 0) {
+		OutputDebugString("\nERROR: Rectangle Region size cannot be zero! --- ClipRectangle - 0\n");
+		return false;
+	}
+
+	if (pSrcImg == NULL)
+	{
+		OutputDebugString("\nERROR: Src Img noexist! --- ClipRectangle - 0\n");
+		return false;
+	}
+
+	unsigned char** pBuffer = NULL;
+	unsigned char** pDstBuffer = NULL;
+
+	unsigned long WIDTH = pSrcImg->GetWidthPixel();
+	unsigned long HEIGHT = pSrcImg->GetHeight();
+
+	unsigned long WIDTH_NEW = clip_width;
+	unsigned long HEIGHT_NEW = clip_height;
+
+	bool ret = false;
+	ret = this->_trans_Gray_CImg_to_Buffer(pSrcImg, pBuffer);
+	if (ret == false || pBuffer == NULL) {
+		OutputDebugString("\nERROR: Trans CImg to Buffer FAILED! --- ClipRectangle - 0\n");
+		return false;
+	}
+
+	//TODO:
+	_clip_rectangle(pBuffer, pDstBuffer, leftTop_x, leftTop_y, WIDTH, HEIGHT, WIDTH_NEW, HEIGHT_NEW);
+	//_scaling_none(pBuffer, pDstBuffer, WIDTH, HEIGHT, WIDTH_NEW, HEIGHT_NEW, piece, piece - 1);
+
+	pDstImg = create_image();
+	if (pDstBuffer)
+		pDstImg->InitArray8(pDstBuffer, HEIGHT_NEW, WIDTH_NEW);
+	else {
+		OutputDebugString("\nERROR: Dst Buffer create FAILED! --- ClipRectangle - 0\n");
+		return false;
+	}
+
+	for (unsigned long i = 0; i < HEIGHT; ++i) {
+		delete[] pBuffer[i];
+	}
+	delete[] pBuffer;
+	pBuffer = NULL;
+
+	for (unsigned long i = 0; i < HEIGHT_NEW; ++i) {
+		delete[] pDstBuffer[i];
+	}
+	delete[] pDstBuffer;
+	pDstBuffer = NULL;
+
+	return true;
+
+
+}
+
+bool Gray_Image_Processing::ClipRegion(CImg* pSrcImg, CImg* &pDstImg) {
+
+	return false;
+}
+
 /*------------------------------------------------------------------------------------------------------------
 --------------------------------------------------Private-----------------------------------------------------
 ------------------------------------------------------------------------------------------------------------*/
@@ -3103,4 +3165,47 @@ bool Gray_Image_Processing::_flip_vertical(unsigned char** pSrc, unsigned char**
 
 	return true;
 
+}
+
+bool Gray_Image_Processing::_clip_rectangle(unsigned char** pSrc, unsigned char** &pDst, long leftTop_x, long leftTop_y, unsigned long width_src, unsigned long height_src, unsigned long &width_dst, unsigned long &height_dst) {
+	if (pSrc == NULL) {
+		OutputDebugString("\nERROR: Src Img noexist! --- ClipRectangle - 1\n");
+		return false;
+	}
+
+	if (leftTop_x > width_src || leftTop_y > height_src) {
+		OutputDebugString("\nERROR: Rectangle position should be inside of Image Area! --- ClipRectangle - 1\n");
+		return false;
+	}
+
+	long start_row = leftTop_y < 0 ? 0 : leftTop_y;
+	long start_col = leftTop_x < 0 ? 0 : leftTop_x;
+	long end_row = leftTop_y + height_dst - 1;
+	long end_col = leftTop_x + width_dst - 1;
+
+	end_row = end_row >= height_src ? height_src - 1 : end_row;
+	end_col = end_col >= width_src ? width_src - 1 : end_col;
+
+	height_dst = end_row - start_row + 1;
+	width_dst = end_col - start_col + 1;
+
+	if (height_dst == 0 || width_dst==0 ) {//should not go into,but for safe
+		OutputDebugString("\nERROR: Destination Rectangle size cannot be zero! --- ClipRectangle - 1\n");
+		return false;
+	}
+
+	pDst = new unsigned char*[height_dst];
+	for (unsigned long i = 0; i < height_dst; ++i) {
+		pDst[i] = new unsigned char[width_dst];
+	}
+
+	for (unsigned long row_index = start_row; start_row <= end_row; row_index++) {
+		if (row_index > end_row) break;
+		for (unsigned long col_index = start_col; col_index <= end_col; col_index++) {
+			pDst[row_index - start_row][col_index - start_col] = pSrc[row_index][col_index];
+			//Memory Bug HERE
+		}
+	}
+
+	return true;
 }

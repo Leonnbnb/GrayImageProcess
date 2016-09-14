@@ -25,7 +25,8 @@ int main() {
 	begin = clock();
 
 	//bool ret = action.Scaling(pImg, himg, 1.0 / 4.0, Gray_Image_Processing::SCALING_METHOD::SC_NONE);
-	bool ret = action.FlipVertical(pImg, himg);
+	//bool ret = action.FlipVertical(pImg, himg);
+	bool ret = action.ClipRectangle(pImg, himg, 20, 30, 500, 800);
 
 	end = clock();
 
