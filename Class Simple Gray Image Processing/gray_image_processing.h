@@ -15,7 +15,7 @@
 #pragma  comment(lib, "../Release/hawkvis.lib")
 #endif
 
-class Gray_Image_Processing final
+class Gray_Image_Processing
 {
 private:
 	Hrlregion *m_rl;
@@ -24,6 +24,24 @@ private:
 public:
 	Gray_Image_Processing() { m_bRegion = false; };
 	~Gray_Image_Processing() {};
+
+	//0x0010
+	typedef enum BINARYZATION_METHOD {
+		NONE = 0x0010,
+
+	};
+
+	//0x0020
+	typedef enum SCALING_METHOD {
+		NONE = 0x0020,
+		NEAREST_NEIGHBOR,
+		BILINEAR,
+		BICUBIC,
+		FOURIER_BASED,
+		EDGE_DIRECTED,
+		HQX,
+		VECTORIZATION
+	};
 
 	//bool TestGetSurroundPixel(CImg* pSrcImg, unsigned long x, unsigned long y, unsigned long mask_width, unsigned long mask_height);
 
@@ -155,6 +173,15 @@ public:
 	//返回值:是否成功执行
 	bool RotateRight(CImg* pSrcImg, CImg* &pDstImg);
 
+	//函数功能: 缩放图像
+	//参数:
+	//CImg* pSrcImg: 源图像
+	//CImg* &pDstImg: 目标图像
+	//double rate: 图像缩放比率
+	//SCALING_METHOD method: 插值算法
+	//返回值:是否成功执行
+	bool Scaling(CImg* pSrcImg, CImg* &pDstImg, double rate, SCALING_METHOD method);
+
 	/*------------------------------------------------------------------------------------------------------------
 	---------------------------------------------------功能实现-----------------------------------------------------
 	------------------------------------------------------------------------------------------------------------*/
@@ -212,6 +239,9 @@ private:
 
 	//顺时针旋转90度
 	bool _rotate_right(unsigned char** pSrc, unsigned char** &pDst, unsigned long width, unsigned long height);
+
+	//无插值缩小图像
+	bool _scaling_none(unsigned char** pSrc, unsigned char** &pDst, unsigned long width_src, unsigned long height_src, unsigned long width_dst, unsigned long height_dst, int piece_size, int selected);
 
 	/*------------------------------------------------------------------------------------------------------------
 	---------------------------------------------------实现组件-----------------------------------------------------

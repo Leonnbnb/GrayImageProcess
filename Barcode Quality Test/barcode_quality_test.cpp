@@ -985,6 +985,8 @@ int main() {
 	if (!rt)
 		return -1;
 
+
+
 	Grade grade;
 	Func(pImg, grade);
 	cout << "Rmin_G:\t\t" << grade.Rmin_Grade << " Rmin_S:\t" << (unsigned int)grade.Rmin

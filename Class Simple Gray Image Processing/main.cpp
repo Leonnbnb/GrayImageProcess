@@ -22,12 +22,12 @@ int main() {
 	unsigned long* hitgram = NULL;
 
 	begin = clock();
-	//bool ret = action.MedianFilter(pImg, img, 3, 3);
+
+	bool ret = action.MedianFilter(pImg, himg, 3, 3);
 
 	//bool ret = action.Histogram(pImg, hitgram);
 	//ret = action.HistogramToImage(hitgram, himg,0x44,0xFF);
 
-	bool ret = action.Closing(pImg, himg);
 
 	//bool ret =mean_image(*pImg, 0, 0, pImg->GetWidthByte(), pImg->GetHeight(), 3, 3);
 	//bool ret = action.Erosion(pImg, img, 3, 3);

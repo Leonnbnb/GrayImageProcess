@@ -1,4 +1,4 @@
-#include "gray_image_processing.h"
+ï»¿#include "gray_image_processing.h"
 
 #ifdef CALC_TIME
 #include <iostream>
@@ -849,27 +849,27 @@ bool Gray_Image_Processing::Histogram(CImg* pSrcImg, unsigned long* &Histogram) 
 	return false;
 }
 
-bool Gray_Image_Processing::HistogramToImage(unsigned long* Histogram, CImg* &pCreateImg, const unsigned  char bkgcolor, const unsigned  char forecolor,bool divided) {
+bool Gray_Image_Processing::HistogramToImage(unsigned long* Histogram, CImg* &pCreateImg, const unsigned  char bkgcolor, const unsigned  char forecolor, bool divided) {
 	if (Histogram == NULL) {
 		OutputDebugString("\nERROR: Histogram noexist! --- HistogramToImage - 0\n");
 		return false;
 	}
 
-	//ÖùÌåÖ®¼äµÄ¾àÀë
+	//æŸ±ä½“ä¹‹é—´çš„è·ç¦»
 	const unsigned long stripe_distance = divided;
-	//ÖùÌåµÄ¿í¶È
+	//æŸ±ä½“çš„å®½åº¦
 	const unsigned long stripe_width = 5;
 
-	//ÕûÕÅÍ¼Æ¬µÄ¸ß¶È
+	//æ•´å¼ å›¾ç‰‡çš„é«˜åº¦
 	const unsigned long width = 768;
 
-	//Í¼Æ¬µÄ¿í¶È
+	//å›¾ç‰‡çš„å®½åº¦
 	const unsigned long height = (stripe_distance + stripe_width) * 256 + 10;
 
-	//Ã¿¸ö»Ò¶ÈÖµÖùÌåµÄ¸ß¶È
+	//æ¯ä¸ªç°åº¦å€¼æŸ±ä½“çš„é«˜åº¦
 	unsigned int striplen[256];
 
-	//ÏñËØÊı×î´óÖµ
+	//åƒç´ æ•°æœ€å¤§å€¼
 	long pix_max = 0;
 	for (int i = 0; i < 256; ++i) {
 		if (Histogram[i] > pix_max)
@@ -880,7 +880,7 @@ bool Gray_Image_Processing::HistogramToImage(unsigned long* Histogram, CImg* &pC
 		return false;
 	}
 
-	//¼ÆËãÃ¿¸öÏñËØÖùÌåµÄ¸ß¶È
+	//è®¡ç®—æ¯ä¸ªåƒç´ æŸ±ä½“çš„é«˜åº¦
 	for (int i = 0; i < 256; ++i) {
 		double rate = Histogram[i] * 1.0 / pix_max*1.0;
 		striplen[i] = (unsigned int)(1.0 * width * rate * 0.95 - 0.5);
@@ -920,7 +920,7 @@ bool Gray_Image_Processing::HistogramToImage(unsigned long* Histogram, CImg* &pC
 	_rotate_left(pBuffer, pRotateBuffer, width, height);
 
 	pCreateImg = create_image();
-	pCreateImg->InitArray8(pRotateBuffer, width, height);//Í¼ÏñĞı×ªºóSrcBufferµÄ¿í¶ÈÎªDstBufferµÄ¸ß¶È
+	pCreateImg->InitArray8(pRotateBuffer, width, height);//å›¾åƒæ—‹è½¬åSrcBufferçš„å®½åº¦ä¸ºDstBufferçš„é«˜åº¦
 
 	return true;
 }
@@ -953,7 +953,7 @@ bool Gray_Image_Processing::RotateLeft(CImg* pSrcImg, CImg* &pDstImg) {
 
 	pDstImg = create_image();
 	if (pDstBuffer)
-		pDstImg->InitArray8(pDstBuffer, WIDTH, HEIGHT);//Í¼ÏñĞı×ªºó±ØĞë½«Ä¿±êÍ¼ÏñµÄ¿í¸ß»¥»»
+		pDstImg->InitArray8(pDstBuffer, WIDTH, HEIGHT);//å›¾åƒæ—‹è½¬åå¿…é¡»å°†ç›®æ ‡å›¾åƒçš„å®½é«˜äº’æ¢
 	else {
 		OutputDebugString("\nERROR: Dst Buffer create FAILED! --- RotateLeft - 0\n");
 		return false;
@@ -965,7 +965,7 @@ bool Gray_Image_Processing::RotateLeft(CImg* pSrcImg, CImg* &pDstImg) {
 	delete[] pBuffer;
 	pBuffer = NULL;
 
-	for (unsigned long i = 0; i < WIDTH; ++i) {//Í¼ÏñĞı×ªºóSrcBufferµÄ¿í¶ÈÎªDstBufferµÄ¸ß¶È
+	for (unsigned long i = 0; i < WIDTH; ++i) {//å›¾åƒæ—‹è½¬åSrcBufferçš„å®½åº¦ä¸ºDstBufferçš„é«˜åº¦
 		delete[] pDstBuffer[i];
 	}
 	delete[] pDstBuffer;
@@ -1002,7 +1002,7 @@ bool Gray_Image_Processing::RotateRight(CImg* pSrcImg, CImg* &pDstImg) {
 
 	pDstImg = create_image();
 	if (pDstBuffer)
-		pDstImg->InitArray8(pDstBuffer, WIDTH, HEIGHT);//Í¼ÏñĞı×ªºó±ØĞë½«Ä¿±êÍ¼ÏñµÄ¿í¸ß»¥»»
+		pDstImg->InitArray8(pDstBuffer, WIDTH, HEIGHT);//å›¾åƒæ—‹è½¬åå¿…é¡»å°†ç›®æ ‡å›¾åƒçš„å®½é«˜äº’æ¢
 	else {
 		OutputDebugString("\nERROR: Dst Buffer create FAILED! --- RotateRight - 0\n");
 		return false;
@@ -1014,13 +1014,83 @@ bool Gray_Image_Processing::RotateRight(CImg* pSrcImg, CImg* &pDstImg) {
 	delete[] pBuffer;
 	pBuffer = NULL;
 
-	for (unsigned long i = 0; i < WIDTH; ++i) {//Í¼ÏñĞı×ªºóSrcBufferµÄ¿í¶ÈÎªDstBufferµÄ¸ß¶È
+	for (unsigned long i = 0; i < WIDTH; ++i) {//å›¾åƒæ—‹è½¬åSrcBufferçš„å®½åº¦ä¸ºDstBufferçš„é«˜åº¦
 		delete[] pDstBuffer[i];
 	}
 	delete[] pDstBuffer;
 	pDstBuffer = NULL;
 
 	return true;
+}
+
+bool Gray_Image_Processing::Scaling(CImg* pSrcImg, CImg* &pDstImg, double rate, SCALING_METHOD method) {
+	if (rate == 0) {
+		OutputDebugString("\nERROR: Rate cannot equal 0! --- Scaling - 0\n");
+		return false;
+	}
+
+	if (method == SCALING_METHOD::NONE && rate > 1) {
+		OutputDebugString("\nERROR: Rate cannot greater than 1 when use NONE method! --- Scaling - 0\n");
+		return false;
+	}
+
+	if (pSrcImg == NULL)
+	{
+		OutputDebugString("\nERROR: Src Img noexist! --- Scaling - 0\n");
+		return false;
+	}
+
+	switch (method) {
+	case SCALING_METHOD::NONE: {
+		unsigned char** pBuffer = NULL;
+		unsigned char** pDstBuffer = NULL;
+
+		unsigned long WIDTH = pSrcImg->GetWidthPixel();
+		unsigned long HEIGHT = pSrcImg->GetHeight();
+
+
+		unsigned int piece = (int)(1 / rate);	//should not be 0
+
+		if (piece == 0) {
+			OutputDebugString("\nERROR: Rate lower than 1! --- Scaling - 0\n");
+			return false;
+		}
+
+		int WIDTH_NEW = WIDTH / piece;
+		int HEIGHT_NEW = HEIGHT / piece;
+
+		bool ret = false;
+
+		//TODO:
+
+
+
+		pDstImg = create_image();
+		if (pDstBuffer)
+			pDstImg->InitArray8(pDstBuffer, HEIGHT_NEW, WIDTH_NEW);
+		else {
+			OutputDebugString("\nERROR: Dst Buffer create FAILED! --- Scaling - 0\n");
+			return false;
+		}
+
+		for (unsigned long i = 0; i < HEIGHT; ++i) {
+			delete[] pBuffer[i];
+		}
+		delete[] pBuffer;
+		pBuffer = NULL;
+
+		for (unsigned long i = 0; i < HEIGHT; ++i) {
+			delete[] pDstBuffer[i];
+		}
+		delete[] pDstBuffer;
+		pDstBuffer = NULL;
+
+		return true;
+	}
+	default: {
+		return false;
+	}
+	}
 }
 
 /*------------------------------------------------------------------------------------------------------------
@@ -1432,23 +1502,23 @@ bool Gray_Image_Processing::_erosion(unsigned char** pSrc, unsigned char** &pDst
 	unsigned long hmask_width = mask_width / 2;
 	unsigned long hmask_height = mask_height / 2;
 
-	//µ±Ä£°å¸ß¶ÈÎª1Ê±
+	//å½“æ¨¡æ¿é«˜åº¦ä¸º1æ—¶
 	if (mask_height == 1) {
 
 		for (unsigned long rownum = 0; rownum < height; ++rownum) {
-			//×îĞ¡»Ò¶ÈÖµ
+			//æœ€å°ç°åº¦å€¼
 			unsigned char current_min = 0xFF;
-			//×ø±êÖµ
+			//åæ ‡å€¼
 			unsigned long x = 0, y = rownum;
-			//µ±Ç°ĞĞÒÑ¼ÇÂ¼µÄ×îĞ¡»Ò¶ÈÖµµÄÎ»ÖÃ
+			//å½“å‰è¡Œå·²è®°å½•çš„æœ€å°ç°åº¦å€¼çš„ä½ç½®
 			unsigned long min_pos = -1;
 
-			//µ±»¬¶¯´°¿ÚÔÚ×ó¶Ë
+			//å½“æ»‘åŠ¨çª—å£åœ¨å·¦ç«¯
 			//******-----------------
 			for (x = 0; x <= hmask_width; ++x) {
 
 				current_min = 0xFF;
-				if (min_pos == -1) {//µ±Ã»ÓĞ¼ÇÂ¼×îĞ¡»Ò¶ÈÖµ×ø±êÎ»ÖÃÊ±,±éÀú´°¿ÚÄÚÈ«²¿ÔªËØ
+				if (min_pos == -1) {//å½“æ²¡æœ‰è®°å½•æœ€å°ç°åº¦å€¼åæ ‡ä½ç½®æ—¶,éå†çª—å£å†…å…¨éƒ¨å…ƒç´ 
 					for (long i = 0; i <= x + hmask_width; ++i) {
 						unsigned char local_min = pSrc[y][i];
 						if (local_min < current_min) {
@@ -1457,8 +1527,8 @@ bool Gray_Image_Processing::_erosion(unsigned char** pSrc, unsigned char** &pDst
 						}
 					}
 				}
-				else {//Èç¹û×îĞ¡»Ò¶ÈÖµ×ø±êÎ»ÖÃÓĞ¼ÇÂ¼,ÄÇÃ´Ö»ĞèÒª½«ĞÂ¼ÓÈë´°¿ÚµÄÏñËØÖµÓë×îĞ¡Öµ±È¶Ô¼´¿É
-					unsigned char local_min = pSrc[y][x + hmask_width];//ĞÂ¼ÓÈë´°¿ÚµÄÏñËØÖµ
+				else {//å¦‚æœæœ€å°ç°åº¦å€¼åæ ‡ä½ç½®æœ‰è®°å½•,é‚£ä¹ˆåªéœ€è¦å°†æ–°åŠ å…¥çª—å£çš„åƒç´ å€¼ä¸æœ€å°å€¼æ¯”å¯¹å³å¯
+					unsigned char local_min = pSrc[y][x + hmask_width];//æ–°åŠ å…¥çª—å£çš„åƒç´ å€¼
 					if (local_min <= pSrc[y][min_pos]) {
 						current_min = local_min;
 						min_pos = x + hmask_width;
@@ -1471,13 +1541,13 @@ bool Gray_Image_Processing::_erosion(unsigned char** pSrc, unsigned char** &pDst
 				pDst[y][x] = current_min;
 			}
 
-			//µ±»¬¶¯´°¿ÚÔÚµ±Ç°ĞĞÖĞ²¿
+			//å½“æ»‘åŠ¨çª—å£åœ¨å½“å‰è¡Œä¸­éƒ¨
 			//-----**********-----
 			min_pos = -1;
 			for (; x <= (width - 1) - hmask_width; ++x) {
 
 				current_min = 0xFF;
-				if (min_pos == -1 || min_pos < (x - hmask_width)) {//µ±Ã»ÓĞ¼ÇÂ¼×îĞ¡»Ò¶ÈÖµ×ø±êÎ»ÖÃ »òÕß ÆäÎ»ÖÃÒÑ¾­²»ÔÚ´°¿ÚÄÚÊ±,±éÀú´°¿ÚÄÚÈ«²¿ÔªËØ
+				if (min_pos == -1 || min_pos < (x - hmask_width)) {//å½“æ²¡æœ‰è®°å½•æœ€å°ç°åº¦å€¼åæ ‡ä½ç½® æˆ–è€… å…¶ä½ç½®å·²ç»ä¸åœ¨çª—å£å†…æ—¶,éå†çª—å£å†…å…¨éƒ¨å…ƒç´ 
 					for (long i = x - hmask_width; i <= x + hmask_width; ++i) {
 						unsigned char local_min = pSrc[y][i];
 						if (local_min < current_min) {
@@ -1486,8 +1556,8 @@ bool Gray_Image_Processing::_erosion(unsigned char** pSrc, unsigned char** &pDst
 						}
 					}
 				}
-				else {//Èç¹û×îĞ¡»Ò¶ÈÖµ×ø±êÎ»ÖÃÓĞ¼ÇÂ¼,ÄÇÃ´Ö»ĞèÒª½«ĞÂ¼ÓÈë´°¿ÚµÄÏñËØÖµÓë×îĞ¡Öµ±È¶Ô¼´¿É
-					unsigned char local_min = pSrc[y][x + hmask_width];//ĞÂ¼ÓÈë´°¿ÚµÄÏñËØÖµ
+				else {//å¦‚æœæœ€å°ç°åº¦å€¼åæ ‡ä½ç½®æœ‰è®°å½•,é‚£ä¹ˆåªéœ€è¦å°†æ–°åŠ å…¥çª—å£çš„åƒç´ å€¼ä¸æœ€å°å€¼æ¯”å¯¹å³å¯
+					unsigned char local_min = pSrc[y][x + hmask_width];//æ–°åŠ å…¥çª—å£çš„åƒç´ å€¼
 					if (local_min <= pSrc[y][min_pos]) {
 						current_min = local_min;
 						min_pos = x + hmask_width;
@@ -1500,9 +1570,9 @@ bool Gray_Image_Processing::_erosion(unsigned char** pSrc, unsigned char** &pDst
 				pDst[y][x] = current_min;
 			}
 
-			//µ±»¬¶¯´°¿ÚÔÚÓÒ¶Ë
+			//å½“æ»‘åŠ¨çª—å£åœ¨å³ç«¯
 			//-------------******
-			for (; x <= width - 1; ++x) {//Î²²¿²»ĞèÔÙ¼ÇÂ¼×îĞ¡ÖµÎ»ÖÃ,ÒòÎªÃ»ÓĞĞÂÏñËØÔö¼Ó,Ö»ÓĞÏñËØÀë¿ª´°¿Ú,¶ÔÆä±éÀú¿ªÏúºÜĞ¡
+			for (; x <= width - 1; ++x) {//å°¾éƒ¨ä¸éœ€å†è®°å½•æœ€å°å€¼ä½ç½®,å› ä¸ºæ²¡æœ‰æ–°åƒç´ å¢åŠ ,åªæœ‰åƒç´ ç¦»å¼€çª—å£,å¯¹å…¶éå†å¼€é”€å¾ˆå°
 
 				current_min = 0xFF;
 				for (long i = x - hmask_width; i <= width - 1; ++i) {
@@ -1519,22 +1589,22 @@ bool Gray_Image_Processing::_erosion(unsigned char** pSrc, unsigned char** &pDst
 		return true;
 	}
 
-	//µ±Ä£°å¿í¶ÈÎª1Ê±
+	//å½“æ¨¡æ¿å®½åº¦ä¸º1æ—¶
 	if (mask_width == 1) {
 
 		for (long colnum = 0; colnum < width; ++colnum) {
-			//×îĞ¡»Ò¶ÈÖµ
+			//æœ€å°ç°åº¦å€¼
 			unsigned char current_min = 0xFF;
-			//×ø±êÖµ
+			//åæ ‡å€¼
 			unsigned long x = colnum, y = 0;
-			//µ±Ç°ÁĞÒÑ¼ÇÂ¼µÄ×îĞ¡»Ò¶ÈÖµµÄÎ»ÖÃ
+			//å½“å‰åˆ—å·²è®°å½•çš„æœ€å°ç°åº¦å€¼çš„ä½ç½®
 			unsigned long min_pos = -1;
 
-			//µ±»¬¶¯´°¿ÚÔÚÉÏ²¿
+			//å½“æ»‘åŠ¨çª—å£åœ¨ä¸Šéƒ¨
 			//******-----------------
 			for (y = 0; y <= hmask_height; ++y) {
 				current_min = 0xFF;
-				if (min_pos == -1) {//µ±Ã»ÓĞ¼ÇÂ¼×îĞ¡»Ò¶ÈÖµ×ø±êÎ»ÖÃÊ±,±éÀú´°¿ÚÄÚÈ«²¿ÔªËØ
+				if (min_pos == -1) {//å½“æ²¡æœ‰è®°å½•æœ€å°ç°åº¦å€¼åæ ‡ä½ç½®æ—¶,éå†çª—å£å†…å…¨éƒ¨å…ƒç´ 
 					for (long i = 0; i <= y + hmask_height; ++i) {
 						unsigned char local_min = pSrc[i][x];
 						if (local_min < current_min) {
@@ -1543,7 +1613,7 @@ bool Gray_Image_Processing::_erosion(unsigned char** pSrc, unsigned char** &pDst
 						}
 					}
 				}
-				else {//Èç¹û×îĞ¡»Ò¶ÈÖµ×ø±êÎ»ÖÃÓĞ¼ÇÂ¼,ÄÇÃ´Ö»ĞèÒª½«ĞÂ¼ÓÈë´°¿ÚµÄÏñËØÖµÓë×îĞ¡Öµ±È¶Ô¼´¿É
+				else {//å¦‚æœæœ€å°ç°åº¦å€¼åæ ‡ä½ç½®æœ‰è®°å½•,é‚£ä¹ˆåªéœ€è¦å°†æ–°åŠ å…¥çª—å£çš„åƒç´ å€¼ä¸æœ€å°å€¼æ¯”å¯¹å³å¯
 					unsigned char local_min = pSrc[y + hmask_height][x];
 					if (local_min <= pSrc[min_pos][x]) {//
 						current_min = local_min;
@@ -1556,11 +1626,11 @@ bool Gray_Image_Processing::_erosion(unsigned char** pSrc, unsigned char** &pDst
 				pDst[y][x] = current_min;
 			}
 
-			//µ±»¬¶¯´°¿ÚÔÚµ±Ç°ÁĞÖĞ²¿
+			//å½“æ»‘åŠ¨çª—å£åœ¨å½“å‰åˆ—ä¸­éƒ¨
 			//-----**********-----
 
 			min_pos = -1;
-			for (; y <= height - 1 - hmask_height; ++y) {//µ±Ã»ÓĞ¼ÇÂ¼×îĞ¡»Ò¶ÈÖµ×ø±êÎ»ÖÃ »òÕß ÆäÎ»ÖÃÒÑ¾­²»ÔÚ´°¿ÚÄÚÊ±,±éÀú´°¿ÚÄÚÈ«²¿ÔªËØ
+			for (; y <= height - 1 - hmask_height; ++y) {//å½“æ²¡æœ‰è®°å½•æœ€å°ç°åº¦å€¼åæ ‡ä½ç½® æˆ–è€… å…¶ä½ç½®å·²ç»ä¸åœ¨çª—å£å†…æ—¶,éå†çª—å£å†…å…¨éƒ¨å…ƒç´ 
 				current_min = 0xFF;
 				if (min_pos == -1 || min_pos < (y - hmask_height)) {
 					for (long i = y - hmask_height; i <= y + hmask_height; ++i) {
@@ -1571,7 +1641,7 @@ bool Gray_Image_Processing::_erosion(unsigned char** pSrc, unsigned char** &pDst
 						}
 					}
 				}
-				else {//Èç¹û×îĞ¡»Ò¶ÈÖµ×ø±êÎ»ÖÃÓĞ¼ÇÂ¼,ÄÇÃ´Ö»ĞèÒª½«ĞÂ¼ÓÈë´°¿ÚµÄÏñËØÖµÓë×îĞ¡Öµ±È¶Ô¼´¿É
+				else {//å¦‚æœæœ€å°ç°åº¦å€¼åæ ‡ä½ç½®æœ‰è®°å½•,é‚£ä¹ˆåªéœ€è¦å°†æ–°åŠ å…¥çª—å£çš„åƒç´ å€¼ä¸æœ€å°å€¼æ¯”å¯¹å³å¯
 					unsigned char local_min = pSrc[y + hmask_height][x];
 					if (local_min <= pSrc[min_pos][x]) {
 						current_min = local_min;
@@ -1584,10 +1654,10 @@ bool Gray_Image_Processing::_erosion(unsigned char** pSrc, unsigned char** &pDst
 				pDst[y][x] = current_min;
 			}
 
-			//µ±»¬¶¯´°¿ÚÔÚÏÂ²¿
+			//å½“æ»‘åŠ¨çª—å£åœ¨ä¸‹éƒ¨
 			//-------------******
 
-			for (; y <= height - 1; ++y) {//Î²²¿²»ĞèÔÙ¼ÇÂ¼×îĞ¡ÖµÎ»ÖÃ,ÒòÎªÃ»ÓĞĞÂÏñËØÔö¼Ó,Ö»ÓĞÏñËØÀë¿ª´°¿Ú,¶ÔÆä±éÀú¿ªÏúºÜĞ¡
+			for (; y <= height - 1; ++y) {//å°¾éƒ¨ä¸éœ€å†è®°å½•æœ€å°å€¼ä½ç½®,å› ä¸ºæ²¡æœ‰æ–°åƒç´ å¢åŠ ,åªæœ‰åƒç´ ç¦»å¼€çª—å£,å¯¹å…¶éå†å¼€é”€å¾ˆå°
 				current_min = 0xFF;
 				for (long i = y - hmask_height; i <= height - 1; ++i) {
 					unsigned char local_min = pSrc[i][x];
@@ -1603,28 +1673,28 @@ bool Gray_Image_Processing::_erosion(unsigned char** pSrc, unsigned char** &pDst
 		return true;
 	}
 
-	//µ±Ä£°å¿í¶È¸ß¶È¶¼´óÓÚ1Ê±
+	//å½“æ¨¡æ¿å®½åº¦é«˜åº¦éƒ½å¤§äº1æ—¶
 
 	unsigned char** pMid = new unsigned char*[height];
 	for (int i = 0; i < height; ++i) {
 		pMid[i] = new unsigned char[width];
 	}
 
-	//ÏÈÇóµÃĞĞÖĞµÄ´°¿Ú×îĞ¡Öµ
+	//å…ˆæ±‚å¾—è¡Œä¸­çš„çª—å£æœ€å°å€¼
 	for (unsigned long rownum = 0; rownum < height; ++rownum) {
-		//×îĞ¡»Ò¶ÈÖµ
+		//æœ€å°ç°åº¦å€¼
 		unsigned char current_min = 0xFF;
-		//×ø±êÖµ
+		//åæ ‡å€¼
 		unsigned long x = 0, y = rownum;
-		//µ±Ç°ĞĞÒÑ¼ÇÂ¼µÄ×îĞ¡»Ò¶ÈÖµµÄÎ»ÖÃ
+		//å½“å‰è¡Œå·²è®°å½•çš„æœ€å°ç°åº¦å€¼çš„ä½ç½®
 		unsigned long min_pos = -1;
 
-		//µ±»¬¶¯´°¿ÚÔÚ×ó¶Ë
+		//å½“æ»‘åŠ¨çª—å£åœ¨å·¦ç«¯
 		//******-----------------
 		for (x = 0; x <= hmask_width; ++x) {
 
 			current_min = 0xFF;
-			if (min_pos == -1) {//µ±Ã»ÓĞ¼ÇÂ¼×îĞ¡»Ò¶ÈÖµ×ø±êÎ»ÖÃÊ±,±éÀú´°¿ÚÄÚÈ«²¿ÔªËØ
+			if (min_pos == -1) {//å½“æ²¡æœ‰è®°å½•æœ€å°ç°åº¦å€¼åæ ‡ä½ç½®æ—¶,éå†çª—å£å†…å…¨éƒ¨å…ƒç´ 
 				for (long i = 0; i <= x + hmask_width; ++i) {
 					unsigned char local_min = pSrc[y][i];
 					if (local_min < current_min) {
@@ -1633,8 +1703,8 @@ bool Gray_Image_Processing::_erosion(unsigned char** pSrc, unsigned char** &pDst
 					}
 				}
 			}
-			else {//Èç¹û×îĞ¡»Ò¶ÈÖµ×ø±êÎ»ÖÃÓĞ¼ÇÂ¼,ÄÇÃ´Ö»ĞèÒª½«ĞÂ¼ÓÈë´°¿ÚµÄÏñËØÖµÓë×îĞ¡Öµ±È¶Ô¼´¿É
-				unsigned char local_min = pSrc[y][x + hmask_width];//ĞÂ¼ÓÈë´°¿ÚµÄÏñËØÖµ
+			else {//å¦‚æœæœ€å°ç°åº¦å€¼åæ ‡ä½ç½®æœ‰è®°å½•,é‚£ä¹ˆåªéœ€è¦å°†æ–°åŠ å…¥çª—å£çš„åƒç´ å€¼ä¸æœ€å°å€¼æ¯”å¯¹å³å¯
+				unsigned char local_min = pSrc[y][x + hmask_width];//æ–°åŠ å…¥çª—å£çš„åƒç´ å€¼
 				if (local_min <= pSrc[y][min_pos]) {
 					current_min = local_min;
 					min_pos = x + hmask_width;
@@ -1647,13 +1717,13 @@ bool Gray_Image_Processing::_erosion(unsigned char** pSrc, unsigned char** &pDst
 			pMid[y][x] = current_min;
 		}
 
-		//µ±»¬¶¯´°¿ÚÔÚµ±Ç°ĞĞÖĞ²¿
+		//å½“æ»‘åŠ¨çª—å£åœ¨å½“å‰è¡Œä¸­éƒ¨
 		//-----**********-----
 		min_pos = -1;
 		for (; x <= (width - 1) - hmask_width; ++x) {
 
 			current_min = 0xFF;
-			if (min_pos == -1 || min_pos < (x - hmask_width)) {//µ±Ã»ÓĞ¼ÇÂ¼×îĞ¡»Ò¶ÈÖµ×ø±êÎ»ÖÃ »òÕß ÆäÎ»ÖÃÒÑ¾­²»ÔÚ´°¿ÚÄÚÊ±,±éÀú´°¿ÚÄÚÈ«²¿ÔªËØ
+			if (min_pos == -1 || min_pos < (x - hmask_width)) {//å½“æ²¡æœ‰è®°å½•æœ€å°ç°åº¦å€¼åæ ‡ä½ç½® æˆ–è€… å…¶ä½ç½®å·²ç»ä¸åœ¨çª—å£å†…æ—¶,éå†çª—å£å†…å…¨éƒ¨å…ƒç´ 
 				for (long i = x - hmask_width; i <= x + hmask_width; ++i) {
 					unsigned char local_min = pSrc[y][i];
 					if (local_min < current_min) {
@@ -1662,8 +1732,8 @@ bool Gray_Image_Processing::_erosion(unsigned char** pSrc, unsigned char** &pDst
 					}
 				}
 			}
-			else {//Èç¹û×îĞ¡»Ò¶ÈÖµ×ø±êÎ»ÖÃÓĞ¼ÇÂ¼,ÄÇÃ´Ö»ĞèÒª½«ĞÂ¼ÓÈë´°¿ÚµÄÏñËØÖµÓë×îĞ¡Öµ±È¶Ô¼´¿É
-				unsigned char local_min = pSrc[y][x + hmask_width];//ĞÂ¼ÓÈë´°¿ÚµÄÏñËØÖµ
+			else {//å¦‚æœæœ€å°ç°åº¦å€¼åæ ‡ä½ç½®æœ‰è®°å½•,é‚£ä¹ˆåªéœ€è¦å°†æ–°åŠ å…¥çª—å£çš„åƒç´ å€¼ä¸æœ€å°å€¼æ¯”å¯¹å³å¯
+				unsigned char local_min = pSrc[y][x + hmask_width];//æ–°åŠ å…¥çª—å£çš„åƒç´ å€¼
 				if (local_min <= pSrc[y][min_pos]) {
 					current_min = local_min;
 					min_pos = x + hmask_width;
@@ -1676,9 +1746,9 @@ bool Gray_Image_Processing::_erosion(unsigned char** pSrc, unsigned char** &pDst
 			pMid[y][x] = current_min;
 		}
 
-		//µ±»¬¶¯´°¿ÚÔÚÓÒ¶Ë
+		//å½“æ»‘åŠ¨çª—å£åœ¨å³ç«¯
 		//-------------******
-		for (; x <= width - 1; ++x) {//Î²²¿²»ĞèÔÙ¼ÇÂ¼×îĞ¡ÖµÎ»ÖÃ,ÒòÎªÃ»ÓĞĞÂÏñËØÔö¼Ó,Ö»ÓĞÏñËØÀë¿ª´°¿Ú,¶ÔÆä±éÀú¿ªÏúºÜĞ¡
+		for (; x <= width - 1; ++x) {//å°¾éƒ¨ä¸éœ€å†è®°å½•æœ€å°å€¼ä½ç½®,å› ä¸ºæ²¡æœ‰æ–°åƒç´ å¢åŠ ,åªæœ‰åƒç´ ç¦»å¼€çª—å£,å¯¹å…¶éå†å¼€é”€å¾ˆå°
 
 			current_min = 0xFF;
 			for (long i = x - hmask_width; i <= width - 1; ++i) {
@@ -1692,20 +1762,20 @@ bool Gray_Image_Processing::_erosion(unsigned char** pSrc, unsigned char** &pDst
 
 	}
 
-	//ÔÙ´ÓĞĞµÄ×îĞ¡ÖµÖĞµÃµ½Õû¸ö´°¿ÚµÄ×îĞ¡Öµ
+	//å†ä»è¡Œçš„æœ€å°å€¼ä¸­å¾—åˆ°æ•´ä¸ªçª—å£çš„æœ€å°å€¼
 	for (long colnum = 0; colnum < width; ++colnum) {
-		//×îĞ¡»Ò¶ÈÖµ
+		//æœ€å°ç°åº¦å€¼
 		unsigned char current_min = 0xFF;
-		//×ø±êÖµ
+		//åæ ‡å€¼
 		unsigned long x = colnum, y = 0;
-		//µ±Ç°ÁĞÒÑ¼ÇÂ¼µÄ×îĞ¡»Ò¶ÈÖµµÄÎ»ÖÃ
+		//å½“å‰åˆ—å·²è®°å½•çš„æœ€å°ç°åº¦å€¼çš„ä½ç½®
 		unsigned long min_pos = -1;
 
-		//µ±»¬¶¯´°¿ÚÔÚÉÏ²¿
+		//å½“æ»‘åŠ¨çª—å£åœ¨ä¸Šéƒ¨
 		//******-----------------
 		for (y = 0; y <= hmask_height; ++y) {
 			current_min = 0xFF;
-			if (min_pos == -1) {//µ±Ã»ÓĞ¼ÇÂ¼×îĞ¡»Ò¶ÈÖµ×ø±êÎ»ÖÃÊ±,±éÀú´°¿ÚÄÚÈ«²¿ÔªËØ
+			if (min_pos == -1) {//å½“æ²¡æœ‰è®°å½•æœ€å°ç°åº¦å€¼åæ ‡ä½ç½®æ—¶,éå†çª—å£å†…å…¨éƒ¨å…ƒç´ 
 				for (long i = 0; i <= y + hmask_height; ++i) {
 					unsigned char local_min = pMid[i][x];
 					if (local_min < current_min) {
@@ -1714,7 +1784,7 @@ bool Gray_Image_Processing::_erosion(unsigned char** pSrc, unsigned char** &pDst
 					}
 				}
 			}
-			else {//Èç¹û×îĞ¡»Ò¶ÈÖµ×ø±êÎ»ÖÃÓĞ¼ÇÂ¼,ÄÇÃ´Ö»ĞèÒª½«ĞÂ¼ÓÈë´°¿ÚµÄÏñËØÖµÓë×îĞ¡Öµ±È¶Ô¼´¿É
+			else {//å¦‚æœæœ€å°ç°åº¦å€¼åæ ‡ä½ç½®æœ‰è®°å½•,é‚£ä¹ˆåªéœ€è¦å°†æ–°åŠ å…¥çª—å£çš„åƒç´ å€¼ä¸æœ€å°å€¼æ¯”å¯¹å³å¯
 				unsigned char local_min = pMid[y + hmask_height][x];
 				if (local_min <= pMid[min_pos][x]) {//
 					current_min = local_min;
@@ -1727,11 +1797,11 @@ bool Gray_Image_Processing::_erosion(unsigned char** pSrc, unsigned char** &pDst
 			pDst[y][x] = current_min;
 		}
 
-		//µ±»¬¶¯´°¿ÚÔÚµ±Ç°ÁĞÖĞ²¿
+		//å½“æ»‘åŠ¨çª—å£åœ¨å½“å‰åˆ—ä¸­éƒ¨
 		//-----**********-----
 
 		min_pos = -1;
-		for (; y <= height - 1 - hmask_height; ++y) {//µ±Ã»ÓĞ¼ÇÂ¼×îĞ¡»Ò¶ÈÖµ×ø±êÎ»ÖÃ »òÕß ÆäÎ»ÖÃÒÑ¾­²»ÔÚ´°¿ÚÄÚÊ±,±éÀú´°¿ÚÄÚÈ«²¿ÔªËØ
+		for (; y <= height - 1 - hmask_height; ++y) {//å½“æ²¡æœ‰è®°å½•æœ€å°ç°åº¦å€¼åæ ‡ä½ç½® æˆ–è€… å…¶ä½ç½®å·²ç»ä¸åœ¨çª—å£å†…æ—¶,éå†çª—å£å†…å…¨éƒ¨å…ƒç´ 
 			current_min = 0xFF;
 			if (min_pos == -1 || min_pos < (y - hmask_height)) {
 				for (long i = y - hmask_height; i <= y + hmask_height; ++i) {
@@ -1742,7 +1812,7 @@ bool Gray_Image_Processing::_erosion(unsigned char** pSrc, unsigned char** &pDst
 					}
 				}
 			}
-			else {//Èç¹û×îĞ¡»Ò¶ÈÖµ×ø±êÎ»ÖÃÓĞ¼ÇÂ¼,ÄÇÃ´Ö»ĞèÒª½«ĞÂ¼ÓÈë´°¿ÚµÄÏñËØÖµÓë×îĞ¡Öµ±È¶Ô¼´¿É
+			else {//å¦‚æœæœ€å°ç°åº¦å€¼åæ ‡ä½ç½®æœ‰è®°å½•,é‚£ä¹ˆåªéœ€è¦å°†æ–°åŠ å…¥çª—å£çš„åƒç´ å€¼ä¸æœ€å°å€¼æ¯”å¯¹å³å¯
 				unsigned char local_min = pMid[y + hmask_height][x];
 				if (local_min <= pMid[min_pos][x]) {
 					current_min = local_min;
@@ -1755,10 +1825,10 @@ bool Gray_Image_Processing::_erosion(unsigned char** pSrc, unsigned char** &pDst
 			pDst[y][x] = current_min;
 		}
 
-		//µ±»¬¶¯´°¿ÚÔÚÏÂ²¿
+		//å½“æ»‘åŠ¨çª—å£åœ¨ä¸‹éƒ¨
 		//-------------******
 
-		for (; y <= height - 1; ++y) {//Î²²¿²»ĞèÔÙ¼ÇÂ¼×îĞ¡ÖµÎ»ÖÃ,ÒòÎªÃ»ÓĞĞÂÏñËØÔö¼Ó,Ö»ÓĞÏñËØÀë¿ª´°¿Ú,¶ÔÆä±éÀú¿ªÏúºÜĞ¡
+		for (; y <= height - 1; ++y) {//å°¾éƒ¨ä¸éœ€å†è®°å½•æœ€å°å€¼ä½ç½®,å› ä¸ºæ²¡æœ‰æ–°åƒç´ å¢åŠ ,åªæœ‰åƒç´ ç¦»å¼€çª—å£,å¯¹å…¶éå†å¼€é”€å¾ˆå°
 			current_min = 0xFF;
 			for (long i = y - hmask_height; i <= height - 1; ++i) {
 				unsigned char local_min = pMid[i][x];
@@ -1835,23 +1905,23 @@ bool Gray_Image_Processing::_dilition(unsigned char** pSrc, unsigned char** &pDs
 	unsigned long hmask_width = mask_width / 2;
 	unsigned long hmask_height = mask_height / 2;
 
-	//µ±Ä£°å¸ß¶ÈÎª1Ê±
+	//å½“æ¨¡æ¿é«˜åº¦ä¸º1æ—¶
 	if (mask_height == 1) {
 
 		for (unsigned long rownum = 0; rownum < height; ++rownum) {
-			//×î´ó»Ò¶ÈÖµ
+			//æœ€å¤§ç°åº¦å€¼
 			unsigned char current_max = 0;
-			//×ø±êÖµ
+			//åæ ‡å€¼
 			unsigned long x = 0, y = rownum;
-			//µ±Ç°ĞĞÒÑ¼ÇÂ¼µÄ×î´ó»Ò¶ÈÖµµÄÎ»ÖÃ
+			//å½“å‰è¡Œå·²è®°å½•çš„æœ€å¤§ç°åº¦å€¼çš„ä½ç½®
 			unsigned long max_pos = -1;
 
-			//µ±»¬¶¯´°¿ÚÔÚ×ó¶Ë
+			//å½“æ»‘åŠ¨çª—å£åœ¨å·¦ç«¯
 			//******-----------------
 			for (x = 0; x <= hmask_width; ++x) {
 
 				current_max = 0;
-				if (max_pos == -1) {//µ±Ã»ÓĞ¼ÇÂ¼×î´ó»Ò¶ÈÖµ×ø±êÎ»ÖÃÊ±,±éÀú´°¿ÚÄÚÈ«²¿ÔªËØ
+				if (max_pos == -1) {//å½“æ²¡æœ‰è®°å½•æœ€å¤§ç°åº¦å€¼åæ ‡ä½ç½®æ—¶,éå†çª—å£å†…å…¨éƒ¨å…ƒç´ 
 					for (long i = 0; i <= x + hmask_width; ++i) {
 						unsigned char local_max = pSrc[y][i];
 						if (local_max > current_max) {
@@ -1860,8 +1930,8 @@ bool Gray_Image_Processing::_dilition(unsigned char** pSrc, unsigned char** &pDs
 						}
 					}
 				}
-				else {//Èç¹û×î´ó»Ò¶ÈÖµ×ø±êÎ»ÖÃÓĞ¼ÇÂ¼,ÄÇÃ´Ö»ĞèÒª½«ĞÂ¼ÓÈë´°¿ÚµÄÏñËØÖµÓë×î´óÖµ±È¶Ô¼´¿É
-					unsigned char local_max = pSrc[y][x + hmask_width];//ĞÂ¼ÓÈë´°¿ÚµÄÏñËØÖµ
+				else {//å¦‚æœæœ€å¤§ç°åº¦å€¼åæ ‡ä½ç½®æœ‰è®°å½•,é‚£ä¹ˆåªéœ€è¦å°†æ–°åŠ å…¥çª—å£çš„åƒç´ å€¼ä¸æœ€å¤§å€¼æ¯”å¯¹å³å¯
+					unsigned char local_max = pSrc[y][x + hmask_width];//æ–°åŠ å…¥çª—å£çš„åƒç´ å€¼
 					if (local_max >= pSrc[y][max_pos]) {
 						current_max = local_max;
 						max_pos = x + hmask_width;
@@ -1874,13 +1944,13 @@ bool Gray_Image_Processing::_dilition(unsigned char** pSrc, unsigned char** &pDs
 				pDst[y][x] = current_max;
 			}
 
-			//µ±»¬¶¯´°¿ÚÔÚµ±Ç°ĞĞÖĞ²¿
+			//å½“æ»‘åŠ¨çª—å£åœ¨å½“å‰è¡Œä¸­éƒ¨
 			//-----**********-----
 			max_pos = -1;
 			for (; x <= (width - 1) - hmask_width; ++x) {
 
 				current_max = 0;
-				if (max_pos == -1 || max_pos < (x - hmask_width)) {//µ±Ã»ÓĞ¼ÇÂ¼×î´ó»Ò¶ÈÖµ×ø±êÎ»ÖÃ »òÕß ÆäÎ»ÖÃÒÑ¾­²»ÔÚ´°¿ÚÄÚÊ±,±éÀú´°¿ÚÄÚÈ«²¿ÔªËØ
+				if (max_pos == -1 || max_pos < (x - hmask_width)) {//å½“æ²¡æœ‰è®°å½•æœ€å¤§ç°åº¦å€¼åæ ‡ä½ç½® æˆ–è€… å…¶ä½ç½®å·²ç»ä¸åœ¨çª—å£å†…æ—¶,éå†çª—å£å†…å…¨éƒ¨å…ƒç´ 
 					for (long i = x - hmask_width; i <= x + hmask_width; ++i) {
 						unsigned char local_max = pSrc[y][i];
 						if (local_max > current_max) {
@@ -1889,8 +1959,8 @@ bool Gray_Image_Processing::_dilition(unsigned char** pSrc, unsigned char** &pDs
 						}
 					}
 				}
-				else {//Èç¹û×î´ó»Ò¶ÈÖµ×ø±êÎ»ÖÃÓĞ¼ÇÂ¼,ÄÇÃ´Ö»ĞèÒª½«ĞÂ¼ÓÈë´°¿ÚµÄÏñËØÖµÓë×î´óÖµ±È¶Ô¼´¿É
-					unsigned char local_max = pSrc[y][x + hmask_width];//ĞÂ¼ÓÈë´°¿ÚµÄÏñËØÖµ
+				else {//å¦‚æœæœ€å¤§ç°åº¦å€¼åæ ‡ä½ç½®æœ‰è®°å½•,é‚£ä¹ˆåªéœ€è¦å°†æ–°åŠ å…¥çª—å£çš„åƒç´ å€¼ä¸æœ€å¤§å€¼æ¯”å¯¹å³å¯
+					unsigned char local_max = pSrc[y][x + hmask_width];//æ–°åŠ å…¥çª—å£çš„åƒç´ å€¼
 					if (local_max >= pSrc[y][max_pos]) {
 						current_max = local_max;
 						max_pos = x + hmask_width;
@@ -1903,9 +1973,9 @@ bool Gray_Image_Processing::_dilition(unsigned char** pSrc, unsigned char** &pDs
 				pDst[y][x] = current_max;
 			}
 
-			//µ±»¬¶¯´°¿ÚÔÚÓÒ¶Ë
+			//å½“æ»‘åŠ¨çª—å£åœ¨å³ç«¯
 			//-------------******
-			for (; x <= width - 1; ++x) {//Î²²¿²»ĞèÔÙ¼ÇÂ¼×î´óÖµÎ»ÖÃ,ÒòÎªÃ»ÓĞĞÂÏñËØÔö¼Ó,Ö»ÓĞÏñËØÀë¿ª´°¿Ú,¶ÔÆä±éÀú¿ªÏúºÜĞ¡
+			for (; x <= width - 1; ++x) {//å°¾éƒ¨ä¸éœ€å†è®°å½•æœ€å¤§å€¼ä½ç½®,å› ä¸ºæ²¡æœ‰æ–°åƒç´ å¢åŠ ,åªæœ‰åƒç´ ç¦»å¼€çª—å£,å¯¹å…¶éå†å¼€é”€å¾ˆå°
 
 				current_max = 0;
 				for (long i = x - hmask_width; i <= width - 1; ++i) {
@@ -1922,22 +1992,22 @@ bool Gray_Image_Processing::_dilition(unsigned char** pSrc, unsigned char** &pDs
 		return true;
 	}
 
-	//µ±Ä£°å¿í¶ÈÎª1Ê±
+	//å½“æ¨¡æ¿å®½åº¦ä¸º1æ—¶
 	if (mask_width == 1) {
 
 		for (long colnum = 0; colnum < width; ++colnum) {
-			//×î´ó»Ò¶ÈÖµ
+			//æœ€å¤§ç°åº¦å€¼
 			unsigned char current_max = 0;
-			//×ø±êÖµ
+			//åæ ‡å€¼
 			unsigned long x = colnum, y = 0;
-			//µ±Ç°ÁĞÒÑ¼ÇÂ¼µÄ×î´ó»Ò¶ÈÖµµÄÎ»ÖÃ
+			//å½“å‰åˆ—å·²è®°å½•çš„æœ€å¤§ç°åº¦å€¼çš„ä½ç½®
 			unsigned long max_pos = -1;
 
-			//µ±»¬¶¯´°¿ÚÔÚÉÏ²¿
+			//å½“æ»‘åŠ¨çª—å£åœ¨ä¸Šéƒ¨
 			//******-----------------
 			for (y = 0; y <= hmask_height; ++y) {
 				current_max = 0;
-				if (max_pos == -1) {//µ±Ã»ÓĞ¼ÇÂ¼×î´ó»Ò¶ÈÖµ×ø±êÎ»ÖÃÊ±,±éÀú´°¿ÚÄÚÈ«²¿ÔªËØ
+				if (max_pos == -1) {//å½“æ²¡æœ‰è®°å½•æœ€å¤§ç°åº¦å€¼åæ ‡ä½ç½®æ—¶,éå†çª—å£å†…å…¨éƒ¨å…ƒç´ 
 					for (long i = 0; i <= y + hmask_height; ++i) {
 						unsigned char local_max = pSrc[i][x];
 						if (local_max > current_max) {
@@ -1946,7 +2016,7 @@ bool Gray_Image_Processing::_dilition(unsigned char** pSrc, unsigned char** &pDs
 						}
 					}
 				}
-				else {//Èç¹û×î´ó»Ò¶ÈÖµ×ø±êÎ»ÖÃÓĞ¼ÇÂ¼,ÄÇÃ´Ö»ĞèÒª½«ĞÂ¼ÓÈë´°¿ÚµÄÏñËØÖµÓë×î´óÖµ±È¶Ô¼´¿É
+				else {//å¦‚æœæœ€å¤§ç°åº¦å€¼åæ ‡ä½ç½®æœ‰è®°å½•,é‚£ä¹ˆåªéœ€è¦å°†æ–°åŠ å…¥çª—å£çš„åƒç´ å€¼ä¸æœ€å¤§å€¼æ¯”å¯¹å³å¯
 					unsigned char local_max = pSrc[y + hmask_height][x];
 					if (local_max >= pSrc[max_pos][x]) {
 						current_max = local_max;
@@ -1959,11 +2029,11 @@ bool Gray_Image_Processing::_dilition(unsigned char** pSrc, unsigned char** &pDs
 				pDst[y][x] = current_max;
 			}
 
-			//µ±»¬¶¯´°¿ÚÔÚµ±Ç°ÁĞÖĞ²¿
+			//å½“æ»‘åŠ¨çª—å£åœ¨å½“å‰åˆ—ä¸­éƒ¨
 			//-----**********-----
 
 			max_pos = -1;
-			for (; y <= height - 1 - hmask_height; ++y) {//µ±Ã»ÓĞ¼ÇÂ¼×î´ó»Ò¶ÈÖµ×ø±êÎ»ÖÃ »òÕß ÆäÎ»ÖÃÒÑ¾­²»ÔÚ´°¿ÚÄÚÊ±,±éÀú´°¿ÚÄÚÈ«²¿ÔªËØ
+			for (; y <= height - 1 - hmask_height; ++y) {//å½“æ²¡æœ‰è®°å½•æœ€å¤§ç°åº¦å€¼åæ ‡ä½ç½® æˆ–è€… å…¶ä½ç½®å·²ç»ä¸åœ¨çª—å£å†…æ—¶,éå†çª—å£å†…å…¨éƒ¨å…ƒç´ 
 				current_max = 0;
 				if (max_pos == -1 || max_pos < (y - hmask_height)) {
 					for (long i = y - hmask_height; i <= y + hmask_height; ++i) {
@@ -1974,7 +2044,7 @@ bool Gray_Image_Processing::_dilition(unsigned char** pSrc, unsigned char** &pDs
 						}
 					}
 				}
-				else {//Èç¹û×î´ó»Ò¶ÈÖµ×ø±êÎ»ÖÃÓĞ¼ÇÂ¼,ÄÇÃ´Ö»ĞèÒª½«ĞÂ¼ÓÈë´°¿ÚµÄÏñËØÖµÓë×î´óÖµ±È¶Ô¼´¿É
+				else {//å¦‚æœæœ€å¤§ç°åº¦å€¼åæ ‡ä½ç½®æœ‰è®°å½•,é‚£ä¹ˆåªéœ€è¦å°†æ–°åŠ å…¥çª—å£çš„åƒç´ å€¼ä¸æœ€å¤§å€¼æ¯”å¯¹å³å¯
 					unsigned char local_max = pSrc[y + hmask_height][x];
 					if (local_max >= pSrc[max_pos][x]) {
 						current_max = local_max;
@@ -1987,10 +2057,10 @@ bool Gray_Image_Processing::_dilition(unsigned char** pSrc, unsigned char** &pDs
 				pDst[y][x] = current_max;
 			}
 
-			//µ±»¬¶¯´°¿ÚÔÚÏÂ²¿
+			//å½“æ»‘åŠ¨çª—å£åœ¨ä¸‹éƒ¨
 			//-------------******
 
-			for (; y <= height - 1; ++y) {//Î²²¿²»ĞèÔÙ¼ÇÂ¼×î´óÖµÎ»ÖÃ,ÒòÎªÃ»ÓĞĞÂÏñËØÔö¼Ó,Ö»ÓĞÏñËØÀë¿ª´°¿Ú,¶ÔÆä±éÀú¿ªÏúºÜĞ¡
+			for (; y <= height - 1; ++y) {//å°¾éƒ¨ä¸éœ€å†è®°å½•æœ€å¤§å€¼ä½ç½®,å› ä¸ºæ²¡æœ‰æ–°åƒç´ å¢åŠ ,åªæœ‰åƒç´ ç¦»å¼€çª—å£,å¯¹å…¶éå†å¼€é”€å¾ˆå°
 				current_max = 0;
 				for (long i = y - hmask_height; i <= height - 1; ++i) {
 					unsigned char local_max = pSrc[i][x];
@@ -2006,28 +2076,28 @@ bool Gray_Image_Processing::_dilition(unsigned char** pSrc, unsigned char** &pDs
 		return true;
 	}
 
-	//µ±Ä£°å¿í¶È¸ß¶È¶¼´óÓÚ1Ê±
+	//å½“æ¨¡æ¿å®½åº¦é«˜åº¦éƒ½å¤§äº1æ—¶
 
 	unsigned char** pMid = new unsigned char*[height];
 	for (int i = 0; i < height; ++i) {
 		pMid[i] = new unsigned char[width];
 	}
 
-	//ÏÈÇóµÃĞĞÖĞµÄ´°¿Ú×î´óÖµ
+	//å…ˆæ±‚å¾—è¡Œä¸­çš„çª—å£æœ€å¤§å€¼
 	for (unsigned long rownum = 0; rownum < height; ++rownum) {
-		//×î´ó»Ò¶ÈÖµ
+		//æœ€å¤§ç°åº¦å€¼
 		unsigned char current_max = 0;
-		//×ø±êÖµ
+		//åæ ‡å€¼
 		unsigned long x = 0, y = rownum;
-		//µ±Ç°ĞĞÒÑ¼ÇÂ¼µÄ×î´ó»Ò¶ÈÖµµÄÎ»ÖÃ
+		//å½“å‰è¡Œå·²è®°å½•çš„æœ€å¤§ç°åº¦å€¼çš„ä½ç½®
 		unsigned long max_pos = -1;
 
-		//µ±»¬¶¯´°¿ÚÔÚ×ó¶Ë
+		//å½“æ»‘åŠ¨çª—å£åœ¨å·¦ç«¯
 		//******-----------------
 		for (x = 0; x <= hmask_width; ++x) {
 
 			current_max = 0;
-			if (max_pos == -1) {//µ±Ã»ÓĞ¼ÇÂ¼×î´ó»Ò¶ÈÖµ×ø±êÎ»ÖÃÊ±,±éÀú´°¿ÚÄÚÈ«²¿ÔªËØ
+			if (max_pos == -1) {//å½“æ²¡æœ‰è®°å½•æœ€å¤§ç°åº¦å€¼åæ ‡ä½ç½®æ—¶,éå†çª—å£å†…å…¨éƒ¨å…ƒç´ 
 				for (long i = 0; i <= x + hmask_width; ++i) {
 					unsigned char local_max = pSrc[y][i];
 					if (local_max > current_max) {
@@ -2036,8 +2106,8 @@ bool Gray_Image_Processing::_dilition(unsigned char** pSrc, unsigned char** &pDs
 					}
 				}
 			}
-			else {//Èç¹û×î´ó»Ò¶ÈÖµ×ø±êÎ»ÖÃÓĞ¼ÇÂ¼,ÄÇÃ´Ö»ĞèÒª½«ĞÂ¼ÓÈë´°¿ÚµÄÏñËØÖµÓë×î´óÖµ±È¶Ô¼´¿É
-				unsigned char local_max = pSrc[y][x + hmask_width];//ĞÂ¼ÓÈë´°¿ÚµÄÏñËØÖµ
+			else {//å¦‚æœæœ€å¤§ç°åº¦å€¼åæ ‡ä½ç½®æœ‰è®°å½•,é‚£ä¹ˆåªéœ€è¦å°†æ–°åŠ å…¥çª—å£çš„åƒç´ å€¼ä¸æœ€å¤§å€¼æ¯”å¯¹å³å¯
+				unsigned char local_max = pSrc[y][x + hmask_width];//æ–°åŠ å…¥çª—å£çš„åƒç´ å€¼
 				if (local_max >= pSrc[y][max_pos]) {
 					current_max = local_max;
 					max_pos = x + hmask_width;
@@ -2050,13 +2120,13 @@ bool Gray_Image_Processing::_dilition(unsigned char** pSrc, unsigned char** &pDs
 			pMid[y][x] = current_max;
 		}
 
-		//µ±»¬¶¯´°¿ÚÔÚµ±Ç°ĞĞÖĞ²¿
+		//å½“æ»‘åŠ¨çª—å£åœ¨å½“å‰è¡Œä¸­éƒ¨
 		//-----**********-----
 		max_pos = -1;
 		for (; x <= (width - 1) - hmask_width; ++x) {
 
 			current_max = 0;
-			if (max_pos == -1 || max_pos < (x - hmask_width)) {//µ±Ã»ÓĞ¼ÇÂ¼×î´ó»Ò¶ÈÖµ×ø±êÎ»ÖÃ »òÕß ÆäÎ»ÖÃÒÑ¾­²»ÔÚ´°¿ÚÄÚÊ±,±éÀú´°¿ÚÄÚÈ«²¿ÔªËØ
+			if (max_pos == -1 || max_pos < (x - hmask_width)) {//å½“æ²¡æœ‰è®°å½•æœ€å¤§ç°åº¦å€¼åæ ‡ä½ç½® æˆ–è€… å…¶ä½ç½®å·²ç»ä¸åœ¨çª—å£å†…æ—¶,éå†çª—å£å†…å…¨éƒ¨å…ƒç´ 
 				for (long i = x - hmask_width; i <= x + hmask_width; ++i) {
 					unsigned char local_max = pSrc[y][i];
 					if (local_max > current_max) {
@@ -2065,8 +2135,8 @@ bool Gray_Image_Processing::_dilition(unsigned char** pSrc, unsigned char** &pDs
 					}
 				}
 			}
-			else {//Èç¹û×î´ó»Ò¶ÈÖµ×ø±êÎ»ÖÃÓĞ¼ÇÂ¼,ÄÇÃ´Ö»ĞèÒª½«ĞÂ¼ÓÈë´°¿ÚµÄÏñËØÖµÓë×î´óÖµ±È¶Ô¼´¿É
-				unsigned char local_max = pSrc[y][x + hmask_width];//ĞÂ¼ÓÈë´°¿ÚµÄÏñËØÖµ
+			else {//å¦‚æœæœ€å¤§ç°åº¦å€¼åæ ‡ä½ç½®æœ‰è®°å½•,é‚£ä¹ˆåªéœ€è¦å°†æ–°åŠ å…¥çª—å£çš„åƒç´ å€¼ä¸æœ€å¤§å€¼æ¯”å¯¹å³å¯
+				unsigned char local_max = pSrc[y][x + hmask_width];//æ–°åŠ å…¥çª—å£çš„åƒç´ å€¼
 				if (local_max >= pSrc[y][max_pos]) {
 					current_max = local_max;
 					max_pos = x + hmask_width;
@@ -2079,9 +2149,9 @@ bool Gray_Image_Processing::_dilition(unsigned char** pSrc, unsigned char** &pDs
 			pMid[y][x] = current_max;
 		}
 
-		//µ±»¬¶¯´°¿ÚÔÚÓÒ¶Ë
+		//å½“æ»‘åŠ¨çª—å£åœ¨å³ç«¯
 		//-------------******
-		for (; x <= width - 1; ++x) {//Î²²¿²»ĞèÔÙ¼ÇÂ¼×î´óÖµÎ»ÖÃ,ÒòÎªÃ»ÓĞĞÂÏñËØÔö¼Ó,Ö»ÓĞÏñËØÀë¿ª´°¿Ú,¶ÔÆä±éÀú¿ªÏúºÜĞ¡
+		for (; x <= width - 1; ++x) {//å°¾éƒ¨ä¸éœ€å†è®°å½•æœ€å¤§å€¼ä½ç½®,å› ä¸ºæ²¡æœ‰æ–°åƒç´ å¢åŠ ,åªæœ‰åƒç´ ç¦»å¼€çª—å£,å¯¹å…¶éå†å¼€é”€å¾ˆå°
 
 			current_max = 0;
 			for (long i = x - hmask_width; i <= width - 1; ++i) {
@@ -2095,20 +2165,20 @@ bool Gray_Image_Processing::_dilition(unsigned char** pSrc, unsigned char** &pDs
 
 	}
 
-	//ÔÙ´ÓĞĞµÄ×î´óÖµÖĞµÃµ½Õû¸ö´°¿ÚµÄ×î´óÖµ
+	//å†ä»è¡Œçš„æœ€å¤§å€¼ä¸­å¾—åˆ°æ•´ä¸ªçª—å£çš„æœ€å¤§å€¼
 	for (long colnum = 0; colnum < width; ++colnum) {
-		//×î´ó»Ò¶ÈÖµ
+		//æœ€å¤§ç°åº¦å€¼
 		unsigned char current_max = 0;
-		//×ø±êÖµ
+		//åæ ‡å€¼
 		unsigned long x = colnum, y = 0;
-		//µ±Ç°ÁĞÒÑ¼ÇÂ¼µÄ×î´ó»Ò¶ÈÖµµÄÎ»ÖÃ
+		//å½“å‰åˆ—å·²è®°å½•çš„æœ€å¤§ç°åº¦å€¼çš„ä½ç½®
 		unsigned long max_pos = -1;
 
-		//µ±»¬¶¯´°¿ÚÔÚÉÏ²¿
+		//å½“æ»‘åŠ¨çª—å£åœ¨ä¸Šéƒ¨
 		//******-----------------
 		for (y = 0; y <= hmask_height; ++y) {
 			current_max = 0;
-			if (max_pos == -1) {//µ±Ã»ÓĞ¼ÇÂ¼×î´ó»Ò¶ÈÖµ×ø±êÎ»ÖÃÊ±,±éÀú´°¿ÚÄÚÈ«²¿ÔªËØ
+			if (max_pos == -1) {//å½“æ²¡æœ‰è®°å½•æœ€å¤§ç°åº¦å€¼åæ ‡ä½ç½®æ—¶,éå†çª—å£å†…å…¨éƒ¨å…ƒç´ 
 				for (long i = 0; i <= y + hmask_height; ++i) {
 					unsigned char local_max = pMid[i][x];
 					if (local_max > current_max) {
@@ -2117,7 +2187,7 @@ bool Gray_Image_Processing::_dilition(unsigned char** pSrc, unsigned char** &pDs
 					}
 				}
 			}
-			else {//Èç¹û×î´ó»Ò¶ÈÖµ×ø±êÎ»ÖÃÓĞ¼ÇÂ¼,ÄÇÃ´Ö»ĞèÒª½«ĞÂ¼ÓÈë´°¿ÚµÄÏñËØÖµÓë×î´óÖµ±È¶Ô¼´¿É
+			else {//å¦‚æœæœ€å¤§ç°åº¦å€¼åæ ‡ä½ç½®æœ‰è®°å½•,é‚£ä¹ˆåªéœ€è¦å°†æ–°åŠ å…¥çª—å£çš„åƒç´ å€¼ä¸æœ€å¤§å€¼æ¯”å¯¹å³å¯
 				unsigned char local_max = pMid[y + hmask_height][x];
 				if (local_max >= pMid[max_pos][x]) {//
 					current_max = local_max;
@@ -2130,11 +2200,11 @@ bool Gray_Image_Processing::_dilition(unsigned char** pSrc, unsigned char** &pDs
 			pDst[y][x] = current_max;
 		}
 
-		//µ±»¬¶¯´°¿ÚÔÚµ±Ç°ÁĞÖĞ²¿
+		//å½“æ»‘åŠ¨çª—å£åœ¨å½“å‰åˆ—ä¸­éƒ¨
 		//-----**********-----
 
 		max_pos = -1;
-		for (; y <= height - 1 - hmask_height; ++y) {//µ±Ã»ÓĞ¼ÇÂ¼×î´ó»Ò¶ÈÖµ×ø±êÎ»ÖÃ »òÕß ÆäÎ»ÖÃÒÑ¾­²»ÔÚ´°¿ÚÄÚÊ±,±éÀú´°¿ÚÄÚÈ«²¿ÔªËØ
+		for (; y <= height - 1 - hmask_height; ++y) {//å½“æ²¡æœ‰è®°å½•æœ€å¤§ç°åº¦å€¼åæ ‡ä½ç½® æˆ–è€… å…¶ä½ç½®å·²ç»ä¸åœ¨çª—å£å†…æ—¶,éå†çª—å£å†…å…¨éƒ¨å…ƒç´ 
 			current_max = 0;
 			if (max_pos == -1 || max_pos < (y - hmask_height)) {
 				for (long i = y - hmask_height; i <= y + hmask_height; ++i) {
@@ -2145,7 +2215,7 @@ bool Gray_Image_Processing::_dilition(unsigned char** pSrc, unsigned char** &pDs
 					}
 				}
 			}
-			else {//Èç¹û×î´ó»Ò¶ÈÖµ×ø±êÎ»ÖÃÓĞ¼ÇÂ¼,ÄÇÃ´Ö»ĞèÒª½«ĞÂ¼ÓÈë´°¿ÚµÄÏñËØÖµÓë×î´óÖµ±È¶Ô¼´¿É
+			else {//å¦‚æœæœ€å¤§ç°åº¦å€¼åæ ‡ä½ç½®æœ‰è®°å½•,é‚£ä¹ˆåªéœ€è¦å°†æ–°åŠ å…¥çª—å£çš„åƒç´ å€¼ä¸æœ€å¤§å€¼æ¯”å¯¹å³å¯
 				unsigned char local_max = pMid[y + hmask_height][x];
 				if (local_max >= pMid[max_pos][x]) {
 					current_max = local_max;
@@ -2158,10 +2228,10 @@ bool Gray_Image_Processing::_dilition(unsigned char** pSrc, unsigned char** &pDs
 			pDst[y][x] = current_max;
 		}
 
-		//µ±»¬¶¯´°¿ÚÔÚÏÂ²¿
+		//å½“æ»‘åŠ¨çª—å£åœ¨ä¸‹éƒ¨
 		//-------------******
 
-		for (; y <= height - 1; ++y) {//Î²²¿²»ĞèÔÙ¼ÇÂ¼×î´óÖµÎ»ÖÃ,ÒòÎªÃ»ÓĞĞÂÏñËØÔö¼Ó,Ö»ÓĞÏñËØÀë¿ª´°¿Ú,¶ÔÆä±éÀú¿ªÏúºÜĞ¡
+		for (; y <= height - 1; ++y) {//å°¾éƒ¨ä¸éœ€å†è®°å½•æœ€å¤§å€¼ä½ç½®,å› ä¸ºæ²¡æœ‰æ–°åƒç´ å¢åŠ ,åªæœ‰åƒç´ ç¦»å¼€çª—å£,å¯¹å…¶éå†å¼€é”€å¾ˆå°
 			current_max = 0;
 			for (long i = y - hmask_height; i <= height - 1; ++i) {
 				unsigned char local_max = pMid[i][x];
@@ -2327,7 +2397,7 @@ bool Gray_Image_Processing::_meanfilter_normal(unsigned char** pSrc, unsigned ch
 	unsigned long hmask_width = mask_width / 2;
 	unsigned long hmask_height = mask_height / 2;
 
-	//µ±Ä£°å¸ß¶ÈÎª1Ê±
+	//å½“æ¨¡æ¿é«˜åº¦ä¸º1æ—¶
 	if (mask_height == 1) {
 		std::vector<unsigned char > pixelset;
 		for (unsigned long rownum = 0; rownum < height; ++rownum) {
@@ -2339,7 +2409,7 @@ bool Gray_Image_Processing::_meanfilter_normal(unsigned char** pSrc, unsigned ch
 						for (std::vector<unsigned char >::iterator pvar = pixelset.begin(); pvar < pixelset.end(); ++pvar) {
 							sum += *pvar;
 						}
-						pDst[rownum][x] = sum*1.0 / pixelset.size();//²»»áÎª0 
+						pDst[rownum][x] = sum*1.0 / pixelset.size();//ä¸ä¼šä¸º0 
 					}
 					else {
 						pDst[rownum][x] = 0;
@@ -2356,7 +2426,7 @@ bool Gray_Image_Processing::_meanfilter_normal(unsigned char** pSrc, unsigned ch
 		return true;
 	}
 
-	//µ±Ä£°å¿í¶ÈÎª1Ê±
+	//å½“æ¨¡æ¿å®½åº¦ä¸º1æ—¶
 	if (mask_width == 1) {
 		std::vector<unsigned char > pixelset;
 		for (long colnum = 0; colnum < width; ++colnum) {
@@ -2368,7 +2438,7 @@ bool Gray_Image_Processing::_meanfilter_normal(unsigned char** pSrc, unsigned ch
 						for (std::vector<unsigned char >::iterator pvar = pixelset.begin(); pvar < pixelset.end(); ++pvar) {
 							sum += *pvar;
 						}
-						pDst[y][colnum] = sum*1.0 / pixelset.size();//²»»áÎª0 
+						pDst[y][colnum] = sum*1.0 / pixelset.size();//ä¸ä¼šä¸º0 
 					}
 					else {
 						pDst[y][colnum] = 0;
@@ -2387,7 +2457,7 @@ bool Gray_Image_Processing::_meanfilter_normal(unsigned char** pSrc, unsigned ch
 		return true;
 	}
 
-	//µ±Ä£°å¿í¶È¸ß¶È¶¼´óÓÚ1Ê±
+	//å½“æ¨¡æ¿å®½åº¦é«˜åº¦éƒ½å¤§äº1æ—¶
 
 	std::vector<unsigned char > pixelset;
 
@@ -2396,7 +2466,7 @@ bool Gray_Image_Processing::_meanfilter_normal(unsigned char** pSrc, unsigned ch
 		pMid[i] = new unsigned char[width];
 	}
 
-	//ÏÈÇóµÃĞĞÖĞµÄ´°¿Ú¾ùÖµ
+	//å…ˆæ±‚å¾—è¡Œä¸­çš„çª—å£å‡å€¼
 	for (unsigned long rownum = 0; rownum < height; ++rownum) {
 		for (unsigned long x = 0; x < width; ++x) {
 			bool ret = __getAdjacent_LR_PixelsGrayValue(pSrc, x, rownum, width, height, mask_width, pixelset);
@@ -2406,7 +2476,7 @@ bool Gray_Image_Processing::_meanfilter_normal(unsigned char** pSrc, unsigned ch
 					for (std::vector<unsigned char >::iterator pvar = pixelset.begin(); pvar < pixelset.end(); ++pvar) {
 						sum += *pvar;
 					}
-					pMid[rownum][x] = sum*1.0 / pixelset.size();//²»»áÎª0 
+					pMid[rownum][x] = sum*1.0 / pixelset.size();//ä¸ä¼šä¸º0 
 				}
 				else {
 					pMid[rownum][x] = 0;
@@ -2422,7 +2492,7 @@ bool Gray_Image_Processing::_meanfilter_normal(unsigned char** pSrc, unsigned ch
 		}
 	}
 
-	//ÔÙ´ÓĞĞµÄ¾ùÖµÖĞµÃµ½Õû¸ö´°¿ÚµÄ¾ùÖµ
+	//å†ä»è¡Œçš„å‡å€¼ä¸­å¾—åˆ°æ•´ä¸ªçª—å£çš„å‡å€¼
 	for (long colnum = 0; colnum < width; ++colnum) {
 		for (unsigned long y = 0; y < height; ++y) {
 			bool ret = __getAdjacent_LR_PixelsGrayValue(pMid, colnum, y, width, height, mask_width, pixelset);
@@ -2432,7 +2502,7 @@ bool Gray_Image_Processing::_meanfilter_normal(unsigned char** pSrc, unsigned ch
 					for (std::vector<unsigned char >::iterator pvar = pixelset.begin(); pvar < pixelset.end(); ++pvar) {
 						sum += *pvar;
 					}
-					pDst[y][colnum] = sum*1.0 / pixelset.size();//²»»áÎª0 
+					pDst[y][colnum] = sum*1.0 / pixelset.size();//ä¸ä¼šä¸º0 
 				}
 				else {
 					pDst[y][colnum] = 0;
@@ -2471,7 +2541,7 @@ bool Gray_Image_Processing::_meanfilter_increment(unsigned char** pSrc, unsigned
 
 	unsigned long maskNum = mask_width*mask_height;
 
-	//µ±Ä£°å¸ß¶ÈÎª1Ê±
+	//å½“æ¨¡æ¿é«˜åº¦ä¸º1æ—¶
 	if (mask_height == 1) {
 		for (unsigned long rownum = 0; rownum < height; ++rownum) {
 			unsigned long sum = 0;
@@ -2498,7 +2568,7 @@ bool Gray_Image_Processing::_meanfilter_increment(unsigned char** pSrc, unsigned
 		return true;
 	}
 
-	//µ±Ä£°å¿í¶ÈÎª1Ê±
+	//å½“æ¨¡æ¿å®½åº¦ä¸º1æ—¶
 	if (mask_width == 1) {
 		for (long colnum = 0; colnum < width; ++colnum) {
 			unsigned long sum = 0;
@@ -2526,15 +2596,15 @@ bool Gray_Image_Processing::_meanfilter_increment(unsigned char** pSrc, unsigned
 		return true;
 	}
 
-	//µ±Ä£°å¿í¶È¸ß¶È¶¼´óÓÚ1Ê±
+	//å½“æ¨¡æ¿å®½åº¦é«˜åº¦éƒ½å¤§äº1æ—¶
 
-	//´æ·ÅĞĞµÄÀÛ¼ÓºÍµÄÖĞ¼äÖµ
+	//å­˜æ”¾è¡Œçš„ç´¯åŠ å’Œçš„ä¸­é—´å€¼
 	unsigned long** pMid = new unsigned long*[height];
 	for (int i = 0; i < height; ++i) {
 		pMid[i] = new unsigned long[width];
 	}
 
-	//ÏÈÇóµÃĞĞÖĞµÄ´°¿Ú¾ùÖµ
+	//å…ˆæ±‚å¾—è¡Œä¸­çš„çª—å£å‡å€¼
 	for (unsigned long rownum = 0; rownum < height; ++rownum) {
 		unsigned long sum = 0;
 		for (unsigned long i = 0; i <= hmask_width; ++i) {
@@ -2558,7 +2628,7 @@ bool Gray_Image_Processing::_meanfilter_increment(unsigned char** pSrc, unsigned
 		}
 	}
 
-	//ÔÙ´ÓĞĞµÄ¾ùÖµÖĞµÃµ½Õû¸ö´°¿ÚµÄ¾ùÖµ
+	//å†ä»è¡Œçš„å‡å€¼ä¸­å¾—åˆ°æ•´ä¸ªçª—å£çš„å‡å€¼
 	for (long colnum = 0; colnum < width; ++colnum) {
 		unsigned long sum = 0;
 		for (unsigned long i = 0; i <= hmask_height; ++i) {
@@ -2623,7 +2693,7 @@ bool Gray_Image_Processing::_meanfilter_region(unsigned char** pSrc, unsigned ch
 					for (std::vector<unsigned char >::iterator pvar = pixelset.begin(); pvar < pixelset.end(); ++pvar) {
 						sum += *pvar;
 					}
-					pDst[y][x] = sum*1.0 / pixelset.size();//²»»áÎª0 
+					pDst[y][x] = sum*1.0 / pixelset.size();//ä¸ä¼šä¸º0 
 				}
 				else {
 					pDst[y][x] = 0;
@@ -2770,7 +2840,12 @@ bool Gray_Image_Processing::_sharpen_region(unsigned char** pSrc, unsigned char*
 		pDiffer[i] = new short[width];
 	}
 
-	_meanfilter_region(pSrc, pMean, width, height, mask_width, mask_height);
+	for (unsigned long i = 0; i < height; ++i) {
+		memcpy(pDst[i], pSrc[i], sizeof(unsigned char)*width);
+	}
+
+	//_meanfilter_region(pSrc, pMean, width, height, mask_width, mask_height);
+	_meanfilter_increment(pSrc, pMean, width, height, mask_width, mask_height);
 	__subtract_region(pSrc, pMean, pDiffer, width, height);
 	__addition_region(pSrc, pDiffer, pDst, width, height, M);
 
@@ -2827,4 +2902,61 @@ bool Gray_Image_Processing::_rotate_right(unsigned char** pSrc, unsigned char** 
 	}
 
 	return true;
+}
+
+bool Gray_Image_Processing::_scaling_none(unsigned char** pSrc, unsigned char** &pDst, unsigned long width_src, unsigned long height_src, unsigned long width_dst, unsigned long height_dst, int piece_size, int selected) {
+	if (pSrc == NULL) {
+		OutputDebugString("\nERROR: Src Img noexist! --- Scaling - 1\n");
+		return false;
+	}
+
+	if (piece_size > width_src || piece_size > height_src) {
+		OutputDebugString("\nERROR: Piece size is greater than width or height! --- Scaling - 1\n");
+		return false;
+	}
+
+	if (selected > piece_size) {
+		OutputDebugString("\nERROR: Selected index is greater than the most! --- Scaling - 1\n");
+		return false;
+	}
+
+	pDst = new unsigned char*[height_dst];
+	for (unsigned long i = 0; i < height_dst; ++i) {
+		pDst[i] = new unsigned char[width_dst];
+	}
+
+	unsigned char** pMid = new unsigned char*[height_dst];
+	for (unsigned long i = 0; i < height_dst; ++i) {
+		pDst[i] = new unsigned char[width_src];
+	}
+
+	unsigned long mid_row_index = 0;
+	for (unsigned long row_index = 0; row_index < height_src; ++row_index) {
+		if (row_index % piece_size == selected) {
+			if (mid_row_index >= height_dst) break;
+			memcpy(pMid[mid_row_index++], pSrc[row_index], width_src * sizeof(unsigned char));
+		}
+		else
+			continue;
+	}
+
+	unsigned long dst_col_index = 0;
+	for (unsigned long col_index = 0; col_index < width_src; ++col_index) {
+		if (col_index % piece_size == selected) {
+			for (unsigned long tmp_index = 0; tmp_index < height_dst; ++tmp_index) {
+
+			}
+		}
+	}
+
+
+	for (unsigned long i = 0; i < height_dst; ++i) {
+		delete[] pMid[i];
+	}
+	delete[] pMid;
+	pMid = NULL;
+
+
+	return true;
+
 }
