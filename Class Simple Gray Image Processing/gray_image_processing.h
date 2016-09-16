@@ -1,12 +1,13 @@
 #pragma once
 
-#include <iostream>
+//#include <iostream>
 #include <vector>
 #include <cmath>//abs()
 #include <memory.h>
 #include <algorithm>
 
 #include <windows.h>//BOOL etc.
+
 //CImg
 #include "..//shared//ExtPatternRecognize.h"
 #ifdef _DEBUG
@@ -14,6 +15,15 @@
 #else
 #pragma  comment(lib, "../Release/hawkvis.lib")
 #endif
+
+//#define CALC_TIME
+//#define LOCAL_FUNCS_EXTEND
+
+#ifdef CALC_TIME
+#include <ctime>//clock_t
+#endif
+
+//class begin here:
 
 class Gray_Image_Processing
 {
@@ -26,13 +36,13 @@ public:
 	~Gray_Image_Processing() {};
 
 	//0x0010
-	typedef enum BINARYZATION_METHOD {
+	enum BINARYZATION_METHOD {
 		BI_NONE = 0x0010,
 
 	};
 
 	//0x0020
-	typedef enum SCALING_METHOD {
+	enum SCALING_METHOD {
 		SC_NONE = 0x0020,
 		SC_NEAREST_NEIGHBOR,
 		SC_BILINEAR,
@@ -214,6 +224,16 @@ public:
 	//返回值:是否成功执行
 	bool ClipRegion(CImg* pSrcImg, CImg* &pDstImg);
 
+#ifdef LOCAL_FUNCS_EXTEND
+	//函数功能: 使用FPU一次性得到Sin与Cos值
+	//参数:
+	//const double Angle: 角度(弧度制)
+	//double& sina: 返回的Sin值
+	//double& cosa: 返回的Cos值
+	void SinCos(const double Angle, double& sina, double& cosa);
+
+#endif
+
 	/*------------------------------------------------------------------------------------------------------------
 	---------------------------------------------------功能实现-----------------------------------------------------
 	------------------------------------------------------------------------------------------------------------*/
@@ -316,4 +336,5 @@ private:
 
 	//将图像指定区域加上指定系数乘以的增量(pSrc+pAddend*M)
 	bool __addition_region(unsigned char** pSrc, short** pAddend, unsigned char** &pDst, unsigned long width, unsigned long height, double M = 0);
+
 };

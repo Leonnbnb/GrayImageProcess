@@ -1,11 +1,24 @@
 ﻿#include "gray_image_processing.h"
 
-//#define CALC_TIME
 
-#ifdef CALC_TIME
-#include <iostream>
-#include <ctime>
-#endif
+
+/*------------------------------------------------------------------------------------------------------------
+--------------------------------------------------Global------------------------------------------------------
+------------------------------------------------------------------------------------------------------------*/
+
+void __declspec(naked) __stdcall __sincos(const double Angle, double& sina, double& cosa)
+{
+	__asm
+	{
+		fld  qword ptr[esp + 4] //Angle   
+		mov  esi, [esp + 12] //&sina
+		mov  edi, [esp + 16] //&cosa
+		fsincos
+		fstp qword ptr[edi]
+		fstp qword ptr[esi]
+		ret 16
+	}
+}
 
 /*------------------------------------------------------------------------------------------------------------
 ------------------------------------------------Interface-----------------------------------------------------
@@ -1258,6 +1271,17 @@ bool Gray_Image_Processing::ClipRegion(CImg* pSrcImg, CImg* &pDstImg) {
 
 	return false;
 }
+
+#ifdef LOCAL_FUNCS_EXTEND
+
+void Gray_Image_Processing::SinCos(const double Angle, double& sina, double& cosa) {
+	double sinvalue = 0, cosvalue = 0;
+	__sincos(Angle, sinvalue, cosvalue);
+	sina = sinvalue;
+	cosa = cosvalue;
+}
+
+#endif
 
 /*------------------------------------------------------------------------------------------------------------
 --------------------------------------------------Private-----------------------------------------------------
@@ -3209,3 +3233,4 @@ bool Gray_Image_Processing::_clip_rectangle(unsigned char** pSrc, unsigned char*
 
 	return true;
 }
+
