@@ -142,7 +142,11 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="gray_image_processing.cpp" />
     <ClCompile Include="libdmtxTest.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="gray_image_processing.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -85,7 +85,7 @@ void Gray_Image_Processing::ClearRegion() {
 	m_bRegion = false;
 }
 
-bool Gray_Image_Processing::Binaryzation(CImg* pSrcImg, CImg* &pDstImg, unsigned char threshold) {
+bool Gray_Image_Processing::Binaryzation(CImg* pSrcImg, CImg* &pDstImg, unsigned char threshold, BINARYZATION_METHOD method) {
 	if (pSrcImg == NULL)
 	{
 		OutputDebugString("\nERROR: Src Img noexist! --- Binaryzation - 0\n");
@@ -105,23 +105,35 @@ bool Gray_Image_Processing::Binaryzation(CImg* pSrcImg, CImg* &pDstImg, unsigned
 		return false;
 	}
 
-	if (!m_bRegion) {
-		OutputDebugString("\nINFO: Whole image Binaryzation --- Binaryzation - 0\n");
-		ret = _binaryzation(pBuffer, pDstBuffer, WIDTH, HEIGHT, threshold);
-		if (ret == false || pBuffer == NULL) {
-			OutputDebugString("\nERROR: Binaryzation FAILED! --- Binaryzation - 0\n");
-			return false;
+	switch (method) {
+
+	case BINARYZATION_METHOD::BI_NONE: {
+
+		if (!m_bRegion) {
+			OutputDebugString("\nINFO: Whole image Binaryzation --- Binaryzation - 0\n");
+			ret = _binaryzation(pBuffer, pDstBuffer, WIDTH, HEIGHT, threshold);
+			if (ret == false || pBuffer == NULL) {
+				OutputDebugString("\nERROR: Binaryzation FAILED! --- Binaryzation - 0\n");
+				return false;
+			}
 		}
-	}
-	else {
-		OutputDebugString("\nINFO: Region Binaryzation --- Binaryzation - 0\n");
-		ret = _binaryzation_region(pBuffer, pDstBuffer, WIDTH, HEIGHT, threshold);
-		if (ret == false || pBuffer == NULL) {
-			OutputDebugString("\nERROR: Region Binaryzation FAILED! --- Binaryzation - 0\n");
-			return false;
+		else {
+			OutputDebugString("\nINFO: Region Binaryzation --- Binaryzation - 0\n");
+			ret = _binaryzation_region(pBuffer, pDstBuffer, WIDTH, HEIGHT, threshold);
+			if (ret == false || pBuffer == NULL) {
+				OutputDebugString("\nERROR: Region Binaryzation FAILED! --- Binaryzation - 0\n");
+				return false;
+			}
 		}
+
+		break;
 	}
 
+	default: {
+		break;
+	}
+
+	}
 
 	pDstImg = create_image();
 	if (pDstBuffer)
@@ -1267,9 +1279,96 @@ bool Gray_Image_Processing::ClipRectangle(CImg* pSrcImg, CImg* &pDstImg, long le
 
 }
 
+//TODO:
 bool Gray_Image_Processing::ClipRegion(CImg* pSrcImg, CImg* &pDstImg) {
 
 	return false;
+}
+
+bool Gray_Image_Processing::Rotate(CImg* pSrcImg, CImg* &pDstImg, double angle, double rotarycentre_x, double rotarycentre_y, double zoom_x, double zoom_y, double move_x, double move_y, unsigned char fill_color, ROTATE_METHOD method, ROTATE_CLIP_METHOD clip_method) {
+	if (pSrcImg == NULL)
+	{
+		OutputDebugString("\nERROR: Src Img noexist! --- Rotate - 0\n");
+		return false;
+	}
+
+	const unsigned long width_src = pSrcImg->GetWidthPixel();
+	const unsigned long height_src = pSrcImg->GetHeight();
+
+	if ((fabs(zoom_x*width_src) < 1.0e-4) || (fabs(zoom_y*height_src) < 1.0e-4)) {
+		OutputDebugString("\nERROR: Zoom Rate is too small! --- Rotate - 0\n");
+		return false;
+	}
+
+	unsigned long width_dst = 0;
+	unsigned long height_dst = 0;
+
+	switch (clip_method) {
+	case ROTATE_CLIP_METHOD::RC_ORIG: {
+		width_dst = width_src;
+		height_dst = height_src;
+		break;
+	}
+	case ROTATE_CLIP_METHOD::RC_FIT: {
+		//TODO: Calc the new size of image after rotate
+
+		//TEMP
+		return false;//delete this after complete
+
+		break;
+	}
+	}
+
+	if (width_dst == 0 || height_dst == 0) {
+		OutputDebugString("\nERROR: Dst img is too small! --- Rotate - 0\n");
+		return false;
+	}
+
+	unsigned char** pBuffer = NULL;
+	unsigned char** pDstBuffer = NULL;
+
+	bool ret = false;
+	ret = this->_trans_Gray_CImg_to_Buffer(pSrcImg, pBuffer);
+	if (ret == false || pBuffer == NULL) {
+		OutputDebugString("\nERROR: Trans CImg to Buffer FAILED! --- Rotate - 0\n");
+		return false;
+	}
+
+	switch (method) {
+	case ROTATE_METHOD::RO_NEAREST_NEIGHBOR: {
+		ret = _rotate_common_nearest_neighbor(pBuffer, pDstBuffer, width_src, height_src, width_dst, height_dst, angle, rotarycentre_x, rotarycentre_y, zoom_x, zoom_y, move_x, move_y, fill_color);
+		break;
+	}
+	case ROTATE_METHOD::RO_BILINEAR: {
+		ret = _rotate_common_bilinear(pBuffer, pDstBuffer, width_src, height_src, width_dst, height_dst, angle, rotarycentre_x, rotarycentre_y, zoom_x, zoom_y, move_x, move_y, fill_color);
+		break;
+	}
+
+	}
+
+	if (ret) {
+		pDstImg = create_image();
+		if (pDstBuffer)
+			pDstImg->InitArray8(pDstBuffer, height_dst, width_dst);
+		else {
+			OutputDebugString("\nERROR: Dst Buffer create FAILED! --- Erosion - 0\n");
+			return false;
+		}
+	}
+
+	for (unsigned long i = 0; i < height_src; ++i) {
+		delete[] pBuffer[i];
+	}
+	delete[] pBuffer;
+	pBuffer = NULL;
+
+	for (unsigned long i = 0; i < height_dst; ++i) {
+		delete[] pDstBuffer[i];
+	}
+	delete[] pDstBuffer;
+	pDstBuffer = NULL;
+
+	return true;
 }
 
 #ifdef LOCAL_FUNCS_EXTEND
@@ -1317,6 +1416,10 @@ bool Gray_Image_Processing::_trans_Gray_CImg_to_Buffer(CImg* pImg, unsigned char
 
 	OutputDebugString("\nINFO: Src Img trans to Buffer success! --- TGCTB\n");
 	return true;
+}
+
+inline bool Gray_Image_Processing::__pixels_is_in_img(const unsigned long width, const unsigned long height, const long x, const long y) {
+	return ((x >= 0) && (x < width) && (y >= 0) && (y < height));
 }
 
 bool Gray_Image_Processing::__getSurroundPixelsGrayValue(unsigned char** pBuffer, unsigned long pos_x, unsigned long pos_y, unsigned long width, unsigned long height, unsigned long mask_width, unsigned long mask_height, std::vector<unsigned char> &pixelset) {
@@ -3213,7 +3316,7 @@ bool Gray_Image_Processing::_clip_rectangle(unsigned char** pSrc, unsigned char*
 	height_dst = end_row - start_row + 1;
 	width_dst = end_col - start_col + 1;
 
-	if (height_dst == 0 || width_dst==0 ) {//should not go into,but for safe
+	if (height_dst == 0 || width_dst == 0) {//should not go into,but for safe
 		OutputDebugString("\nERROR: Destination Rectangle size cannot be zero! --- ClipRectangle - 1\n");
 		return false;
 	}
@@ -3227,10 +3330,116 @@ bool Gray_Image_Processing::_clip_rectangle(unsigned char** pSrc, unsigned char*
 		if (row_index > end_row) break;
 		for (unsigned long col_index = start_col; col_index <= end_col; col_index++) {
 			pDst[row_index - start_row][col_index - start_col] = pSrc[row_index][col_index];
-			//Memory Bug HERE
 		}
 	}
 
 	return true;
 }
 
+bool Gray_Image_Processing::_rotate_common_nearest_neighbor(unsigned char** pSrc, unsigned char** &pDst, unsigned long width_src, unsigned long height_src, unsigned long width_dst, unsigned long height_dst, double angle, double rotarycentre_x, double rotarycentre_y, double zoom_x, double zoom_y, double move_x, double move_y, unsigned char fill_color) {
+	if (pSrc == NULL) {
+		OutputDebugString("\nERROR: Src Img noexist! --- Rotate - 1\n");
+		return false;
+	}
+
+	pDst = new unsigned char*[height_dst];
+	for (unsigned long i = 0; i < height_dst; ++i) {
+		pDst[i] = new unsigned char[width_dst];
+	}
+
+	double sinVal = 0, cosVal = 0;
+	__sincos(angle, sinVal, cosVal);
+
+	//double rzoomx = 1 / zoom_x, rzoomy = 1 / zoom_y;
+	double tmprzoomxy = 1.0 / (zoom_x*zoom_y);
+	double rzoomx = tmprzoomxy*zoom_y;
+	double rzoomy = tmprzoomxy*zoom_x;
+
+	double rzxcv = rzoomx * cosVal;
+	double rzxsv = rzoomx * sinVal;
+	double rzycv = rzoomy * cosVal;
+	double rzysv = rzoomy * sinVal;
+
+	double mxAddrcx = move_x + rotarycentre_x;
+	double myAddrcy = move_y + rotarycentre_y;
+
+	for (long y = 0; y < height_src; ++y) {
+		double ySegSv = (y - myAddrcy) * rzysv - rotarycentre_x;
+		double ySegCv = (y - myAddrcy) * rzycv + rotarycentre_y;
+		for (long x = 0; x < width_src; ++x) {
+			long srcx = (long)((x - mxAddrcx) * rzxcv - ySegSv);
+			long srcy = (long)((x - mxAddrcx) * rzxsv + ySegCv);
+			if (__pixels_is_in_img(width_src, height_src, srcx, srcy))
+				pDst[y][x] = pSrc[srcy][srcx];
+			else
+				pDst[y][x] = fill_color;
+		}
+	}
+
+	return true;
+}
+
+bool Gray_Image_Processing::_rotate_common_bilinear(unsigned char** pSrc, unsigned char** &pDst, unsigned long width_src, unsigned long height_src, unsigned long width_dst, unsigned long height_dst, double angle, double rotarycentre_x, double rotarycentre_y, double zoom_x, double zoom_y, double move_x, double move_y, unsigned char fill_color) {
+	if (pSrc == NULL) {
+		OutputDebugString("\nERROR: Src Img noexist! --- Rotate - 1\n");
+		return false;
+	}
+
+	pDst = new unsigned char*[height_dst];
+	for (unsigned long i = 0; i < height_dst; ++i) {
+		pDst[i] = new unsigned char[width_dst];
+	}
+
+	double sinVal = 0, cosVal = 0;
+	__sincos(angle, sinVal, cosVal);
+
+	//double rzoomx = 1 / zoom_x, rzoomy = 1 / zoom_y;
+	double tmprzoomxy = 1.0 / (zoom_x*zoom_y);
+	double rzoomx = tmprzoomxy*zoom_y;
+	double rzoomy = tmprzoomxy*zoom_x;
+
+	double rzxcv = rzoomx * cosVal;
+	double rzxsv = rzoomx * sinVal;
+	double rzycv = rzoomy * cosVal;
+	double rzysv = rzoomy * sinVal;
+
+	double mxAddrcx = move_x + rotarycentre_x;
+	double myAddrcy = move_y + rotarycentre_y;
+
+	for (long y = 0; y < height_src; ++y) {
+		double ySegSv = (y - myAddrcy) * rzysv - rotarycentre_x;
+		double ySegCv = (y - myAddrcy) * rzycv + rotarycentre_y;
+
+		for (long x = 0; x < width_src; ++x) {
+			double srcx = (x - mxAddrcx) * rzxcv - ySegSv;
+			double srcy = (x - mxAddrcx) * rzxsv + ySegCv;
+
+			long lx = (long)srcx;
+			long ly = (long)srcy;
+
+			double u = srcx - lx;
+			double v = srcy - ly;
+
+			long lx_1 = (lx + 1) >= width_src ? width_src - 1 : (lx + 1);
+			long ly_1 = (ly + 1) >= height_src ? height_src - 1 : (ly + 1);
+
+			if (__pixels_is_in_img(width_src, height_src, srcx, srcy)) {
+				pDst[y][x] =	(1 - u) * (1 - v) *		pSrc[ly][lx] +
+								(1 - u) * v *			pSrc[ly][lx_1] +
+								u * (1 - v) *			pSrc[ly_1][lx] +
+								u * v *					pSrc[ly_1][lx_1];
+			}
+			else
+				pDst[y][x] = fill_color;
+
+
+			/*if (__pixels_is_in_img(width_src, height_src, srcx, srcy))
+				pDst[y][x] = pSrc[srcy][srcx];
+			else
+				pDst[y][x] = fill_color;*/
+
+		}
+	}
+
+	return true;
+}

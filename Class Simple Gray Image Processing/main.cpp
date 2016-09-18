@@ -5,21 +5,6 @@
 
 using namespace std;
 
-
-//void __declspec(naked) __stdcall SinCos(const double Angle, double& sina, double& cosa)
-//{
-//	__asm
-//	{
-//		fld  qword ptr[esp + 4]//Angle   
-//		mov  esi, [esp + 12]//&sina
-//		mov  edi, [esp + 16]//&cosa
-//		fsincos
-//		fstp qword ptr[edi]
-//		fstp qword ptr[esi]
-//		ret 16
-//	}
-//}
-
 int main() {
 
 	Gray_Image_Processing action;
@@ -31,6 +16,7 @@ int main() {
 
 	CImg* img = NULL;
 	CImg* himg = NULL;
+	CImg* limg = NULL;
 
 	clock_t begin, end;
 
@@ -40,14 +26,12 @@ int main() {
 
 	//bool ret = action.Scaling(pImg, himg, 1.0 / 4.0, Gray_Image_Processing::SCALING_METHOD::SC_NONE);
 	//bool ret = action.FlipVertical(pImg, himg);
-	bool ret = action.ClipRectangle(pImg, himg, 20, 30, 500, 800);
+	//bool ret = action.ClipRectangle(pImg, himg, 20, 30, 500, 800);
+	bool ret = action.Rotate(pImg, himg, 2, pImg->GetWidthPixel()*0.5, pImg->GetHeight()*0.5,
+		1, 1, 0, 0, 0xFF, Gray_Image_Processing::ROTATE_METHOD::RO_BILINEAR, Gray_Image_Processing::ROTATE_CLIP_METHOD::RC_ORIG);
+	//ret = action.Scaling(himg, limg, 1.0 / 4.0, Gray_Image_Processing::SCALING_METHOD::SC_NONE);
 
 	end = clock();
-
-	double a = 2,s = 0, c = 0;
-	action.SinCos(a, s, c);
-
-	cout << s << " " << c << endl;
 
 	cout << (unsigned int)(end - begin) << endl;
 

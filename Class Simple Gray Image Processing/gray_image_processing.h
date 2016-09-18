@@ -1,6 +1,5 @@
 #pragma once
 
-//#include <iostream>
 #include <vector>
 #include <cmath>//abs()
 #include <memory.h>
@@ -35,22 +34,38 @@ public:
 	Gray_Image_Processing() { m_bRegion = false; };
 	~Gray_Image_Processing() {};
 
-	//0x0010
 	enum BINARYZATION_METHOD {
-		BI_NONE = 0x0010,
-
+		//自定义阈值
+		BI_NONE
 	};
 
-	//0x0020
 	enum SCALING_METHOD {
-		SC_NONE = 0x0020,
+		//无插值(抽取)
+		SC_NONE,
+		//最邻近插值
 		SC_NEAREST_NEIGHBOR,
+		//双线性插值
 		SC_BILINEAR,
+		//双三次插值
 		SC_BICUBIC,
+		//基于图像配准的傅立叶变换
 		SC_FOURIER_BASED,
-		SC_EDGE_DIRECTED,
-		SC_HQX,
-		SC_VECTORIZATION
+	};
+
+	enum ROTATE_METHOD {
+		//最邻近插值
+		RO_NEAREST_NEIGHBOR,
+		//双线性插值
+		RO_BILINEAR,
+		//双三次插值
+		RO_BICUBIC
+	};
+
+	enum ROTATE_CLIP_METHOD {
+		//原图大小
+		RC_ORIG,
+		//适应旋转缩放
+		RC_FIT
 	};
 
 	//bool TestGetSurroundPixel(CImg* pSrcImg, unsigned long x, unsigned long y, unsigned long mask_width, unsigned long mask_height);
@@ -73,8 +88,9 @@ public:
 	//CImg* pSrcImg: 源图像
 	//CImg* &pDstImg: 目标图像
 	//unsigned char threshold: 二值化阈值(默认为127)
+	//BINARYZATION_METHOD method: 其他自适应阈值计算算法(当参数不为BINARYZATION_METHOD::BI_NONE时,指定的阈值无效)
 	//返回值:是否成功执行
-	bool Binaryzation(CImg* pSrcImg, CImg* &pDstImg, unsigned char threshold = 0x7F/*127*/);
+	bool Binaryzation(CImg* pSrcImg, CImg* &pDstImg, unsigned char threshold = 0x7F/*127*/, BINARYZATION_METHOD method = BINARYZATION_METHOD::BI_NONE);
 
 	//函数功能: 灰度腐蚀
 	//参数:
@@ -224,6 +240,22 @@ public:
 	//返回值:是否成功执行
 	bool ClipRegion(CImg* pSrcImg, CImg* &pDstImg);
 
+	//函数功能: 将整幅图像旋转
+	//参数:
+	//CImg* pSrcImg: 源图像
+	//CImg* &pDstImg: 目标图像
+	//double angle: 旋转角度
+	//double rotarycentre_x: 旋转中心X坐标
+	//double rotarycentre_y: 旋转中心Y坐标
+	//double zoom_x: X方向缩放比率
+	//double zoom_y: Y方向缩放比率
+	//double move_x: X方向偏移量
+	//double move_y: Y方向偏移量
+	//unsigned char fill_color: 旋转后不在源图像中的点的填充颜色
+	//ROTATE_METHOD method: 插值方式(默认为无插值 ROTATE_METHOD::RO_NONE)
+	//ROTATE_CLIP_METHOD clip_method: 图片裁切缩放方式(默认为原图大小 ROTATE_CLIP_METHOD::RC_ORIG)
+	bool Rotate(CImg* pSrcImg, CImg* &pDstImg, double angle, double rotarycentre_x, double rotarycentre_y, double zoom_x, double zoom_y, double move_x, double move_y , unsigned char fill_color, ROTATE_METHOD method = ROTATE_METHOD::RO_NEAREST_NEIGHBOR, ROTATE_CLIP_METHOD clip_method = ROTATE_CLIP_METHOD::RC_ORIG);
+
 #ifdef LOCAL_FUNCS_EXTEND
 	//函数功能: 使用FPU一次性得到Sin与Cos值
 	//参数:
@@ -292,7 +324,7 @@ private:
 	//顺时针旋转90度
 	bool _rotate_right(unsigned char** pSrc, unsigned char** &pDst, unsigned long width, unsigned long height);
 
-	//无插值缩小图像
+	//抽取像素缩小图像
 	bool _scaling_none(unsigned char** pSrc, unsigned char** &pDst, unsigned long width_src, unsigned long height_src, unsigned long width_dst, unsigned long height_dst, int piece_size, int selected);
 
 	//水平翻转图像
@@ -303,6 +335,12 @@ private:
 
 	//裁切矩形区域
 	bool _clip_rectangle(unsigned char** pSrc, unsigned char** &pDst, long leftTop_x, long leftTop_y, unsigned long width_src, unsigned long height_src, unsigned long &width_dst, unsigned long &height_dst);
+
+	//非特殊角度的临近插值旋转
+	bool _rotate_common_nearest_neighbor(unsigned char** pSrc, unsigned char** &pDst, unsigned long width_src, unsigned long height_src, unsigned long width_dst, unsigned long height_dst, double angle, double rotarycentre_x, double rotarycentre_y, double zoom_x, double zoom_y, double move_x, double move_y, unsigned char fill_color);
+
+	//非特殊角度的双线性插值旋转
+	bool _rotate_common_bilinear(unsigned char** pSrc, unsigned char** &pDst, unsigned long width_src, unsigned long height_src, unsigned long width_dst, unsigned long height_dst, double angle, double rotarycentre_x, double rotarycentre_y, double zoom_x, double zoom_y, double move_x, double move_y, unsigned char fill_color);
 
 	/*------------------------------------------------------------------------------------------------------------
 	---------------------------------------------------实现组件-----------------------------------------------------
@@ -337,4 +375,6 @@ private:
 	//将图像指定区域加上指定系数乘以的增量(pSrc+pAddend*M)
 	bool __addition_region(unsigned char** pSrc, short** pAddend, unsigned char** &pDst, unsigned long width, unsigned long height, double M = 0);
 
+	//判断一个点是否在图片中
+	inline bool __pixels_is_in_img(const unsigned long width, const unsigned long height, const long x, const long y);
 };

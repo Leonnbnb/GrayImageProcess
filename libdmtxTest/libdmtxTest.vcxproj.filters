@@ -14,5 +14,13 @@
     <ClCompile Include="libdmtxTest.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="gray_image_processing.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="gray_image_processing.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
