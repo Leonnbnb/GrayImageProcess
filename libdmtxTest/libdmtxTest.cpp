@@ -14,7 +14,7 @@
 #pragma  comment(lib, "..//libdmtx-0.7.4//project//visualc9//Release//libdmtx.lib")
 #endif
 
-#include "gray_image_processing.h"
+#include "..//Class Simple Gray Image Processing//gray_image_processing.h"
 
 #include "..//libdmtx-0.7.4//dmtx.h"
 
@@ -150,10 +150,10 @@ bool DecodeAndClipRegion(CImg* pImg, CImg* pRegion, string &code) {
 	x_set.push_back(pxTopRight.X);
 	x_set.push_back(pxBottomRight.X);
 
-	y_set.push_back(fabs(height - pxTopLeft.Y));
-	y_set.push_back(fabs(height - pxBottomLeft.Y));
-	y_set.push_back(fabs(height - pxTopRight.Y));
-	y_set.push_back(fabs(height - pxBottomRight.Y));
+	y_set.push_back(abs(height - pxTopLeft.Y));
+	y_set.push_back(abs(height - pxBottomLeft.Y));
+	y_set.push_back(abs(height - pxTopRight.Y));
+	y_set.push_back(abs(height - pxBottomRight.Y));
 
 	sort(x_set.begin(), x_set.end());
 	sort(y_set.begin(), y_set.end());
@@ -169,15 +169,15 @@ bool DecodeAndClipRegion(CImg* pImg, CImg* pRegion, string &code) {
 			*p = 0;
 	}
 
-	float flipcx = cx, flipcy = fabs(height - cy);
+	float flipcx = cx, flipcy = abs(height - cy);
 	float dx = reg->bottomLine.locBeg.X - flipcx;
-	float dy = flipcy - fabs(height - reg->bottomLine.locBeg.Y);
+	float dy = flipcy - abs(height - reg->bottomLine.locBeg.Y);
 
 	vector<DmtxPixelLoc > region_flip_point_set;
 	for each(auto point in region_point_set) {
 		DmtxPixelLoc pTmp;
 		pTmp.X = point.X;
-		pTmp.Y = fabs(height - point.Y);
+		pTmp.Y = abs(height - point.Y);
 		region_flip_point_set.push_back(pTmp);
 	}
 
@@ -266,14 +266,65 @@ int main() {
 	CImg* rImg = NULL;
 	string code;
 
+
 	//BOOL rt = pImg->AttachFromFile("..//imgs//3_rotate.bmp");
-	BOOL rt = pImg->AttachFromFile("..//imgs//code-test-50.bmp");
+	BOOL rt = pImg->AttachFromFile("..//imgs//micro//clip_9_contrast_binary.bmp");
 	if (!rt)
 		return -1;
 
+	//------
+
+	long width, height;
+	width = pImg->GetWidthPixel();
+	height = pImg->GetHeight();
+
+	//new
+	unsigned char* source = new unsigned char[height*width];
+
+	//trans
+	for (long j = 0; j < height; ++j) {
+		for (long i = 0; i < width; ++i) {
+			BYTE* pBuff = pImg->GetPixelAddressRow(j);
+			source[j*width + i] = pBuff[i];
+		}
+	}
+
 	begin = clock();
 
-	DecodeAndClipRegion(pImg, rImg, code);
+	DmtxEncode     *enc = NULL;
+	DmtxImage      *img = NULL;
+	DmtxDecode     *dec = NULL;
+	DmtxRegion     *reg = NULL;
+	DmtxMessage    *msg = NULL;
+
+	img = dmtxImageCreate(source, width, height, DmtxPack8bppK);
+	assert(img != NULL);
+
+	dec = dmtxDecodeCreate(img, 1);
+	assert(dec != NULL);
+
+	reg = dmtxRegionFindNext(dec, NULL);
+	if (reg != NULL) {
+		msg = dmtxDecodeMatrixRegion(dec, reg, DmtxUndefined);
+		if (msg != NULL) {
+			fputs("output: \"", stdout);
+			fwrite(msg->output, sizeof(unsigned char), msg->outputIdx, stdout);
+			fputs("\"\n", stdout);
+			dmtxMessageDestroy(&msg);
+		}
+		dmtxRegionDestroy(&reg);
+	}
+	else {
+		dmtxDecodeDestroy(&dec);
+		dmtxImageDestroy(&img);
+		return -1;
+	}
+
+	dmtxDecodeDestroy(&dec);
+	dmtxImageDestroy(&img);
+
+	//DecodeAndClipRegion(pImg, rImg, code);
+
 
 	end = clock();
 

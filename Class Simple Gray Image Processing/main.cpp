@@ -26,9 +26,9 @@ int main() {
 
 	//bool ret = action.Scaling(pImg, himg, 1.0 / 4.0, Gray_Image_Processing::SCALING_METHOD::SC_NONE);
 	//bool ret = action.FlipVertical(pImg, himg);
-	//bool ret = action.ClipRectangle(pImg, himg, 20, 30, 500, 800);
-	bool ret = action.Rotate(pImg, himg, 2, pImg->GetWidthPixel()*0.5, pImg->GetHeight()*0.5,
-		1, 1, 0, 0, 0xFF, Gray_Image_Processing::ROTATE_METHOD::RO_BILINEAR, Gray_Image_Processing::ROTATE_CLIP_METHOD::RC_ORIG);
+	bool ret = action.ClipRectangle(pImg, himg, 10, 10, 3500, 1800);
+	/*bool ret = action.Rotate(pImg, himg, 2, pImg->GetWidthPixel()*0.5, pImg->GetHeight()*0.5,
+		1, 1, 0, 0, 0xFF, Gray_Image_Processing::ROTATE_METHOD::RO_BILINEAR, Gray_Image_Processing::ROTATE_CLIP_METHOD::RC_ORIG);*/
 	//ret = action.Scaling(himg, limg, 1.0 / 4.0, Gray_Image_Processing::SCALING_METHOD::SC_NONE);
 
 	end = clock();

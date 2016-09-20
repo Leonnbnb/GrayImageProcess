@@ -208,6 +208,16 @@ public:
 	//返回值:是否成功执行
 	bool Scaling(CImg* pSrcImg, CImg* &pDstImg, double rate, SCALING_METHOD method);
 
+	//函数功能: 缩放图像
+	//参数:
+	//CImg* pSrcImg: 源图像
+	//CImg* &pDstImg: 目标图像
+	//unsigned long width_dst: 目标图像的宽度
+	//unsigned long height_dst: 目标图像的高度
+	//SCALING_METHOD method: 插值算法
+	//返回值:是否成功执行
+	bool Scaling(CImg* pSrcImg, CImg* &pDstImg, unsigned long width_dst, unsigned long height_dst, SCALING_METHOD method);
+
 	//函数功能: 将整幅图像水平翻转
 	//参数:
 	//CImg* pSrcImg: 源图像
@@ -237,8 +247,9 @@ public:
 	//参数:
 	//CImg* pSrcImg: 源图像
 	//CImg* &pDstImg: 目标图像
+	//const unsigned char fillup_color: 填充颜色
 	//返回值:是否成功执行
-	bool ClipRegion(CImg* pSrcImg, CImg* &pDstImg);
+	bool ClipRegion(CImg* pSrcImg, CImg* &pDstImg, const unsigned char fillup_color);
 
 	//函数功能: 将整幅图像旋转
 	//参数:
@@ -254,7 +265,7 @@ public:
 	//unsigned char fill_color: 旋转后不在源图像中的点的填充颜色
 	//ROTATE_METHOD method: 插值方式(默认为无插值 ROTATE_METHOD::RO_NONE)
 	//ROTATE_CLIP_METHOD clip_method: 图片裁切缩放方式(默认为原图大小 ROTATE_CLIP_METHOD::RC_ORIG)
-	bool Rotate(CImg* pSrcImg, CImg* &pDstImg, double angle, double rotarycentre_x, double rotarycentre_y, double zoom_x, double zoom_y, double move_x, double move_y , unsigned char fill_color, ROTATE_METHOD method = ROTATE_METHOD::RO_NEAREST_NEIGHBOR, ROTATE_CLIP_METHOD clip_method = ROTATE_CLIP_METHOD::RC_ORIG);
+	bool Rotate(CImg* pSrcImg, CImg* &pDstImg, double angle, double rotarycentre_x, double rotarycentre_y, double zoom_x, double zoom_y, double move_x, double move_y, unsigned char fill_color, ROTATE_METHOD method = ROTATE_METHOD::RO_NEAREST_NEIGHBOR, ROTATE_CLIP_METHOD clip_method = ROTATE_CLIP_METHOD::RC_ORIG);
 
 #ifdef LOCAL_FUNCS_EXTEND
 	//函数功能: 使用FPU一次性得到Sin与Cos值
@@ -327,6 +338,9 @@ private:
 	//抽取像素缩小图像
 	bool _scaling_none(unsigned char** pSrc, unsigned char** &pDst, unsigned long width_src, unsigned long height_src, unsigned long width_dst, unsigned long height_dst, int piece_size, int selected);
 
+	//邻近点取样缩放图像
+	bool _scaling_nearest_neighbor(unsigned char** pSrc, unsigned char** &pDst, unsigned long width_src, unsigned long height_src, unsigned long width_dst, unsigned long height_dst);
+
 	//水平翻转图像
 	bool _flip_horizontal(unsigned char** pSrc, unsigned char** &pDst, unsigned long width, unsigned long height);
 
@@ -341,6 +355,9 @@ private:
 
 	//非特殊角度的双线性插值旋转
 	bool _rotate_common_bilinear(unsigned char** pSrc, unsigned char** &pDst, unsigned long width_src, unsigned long height_src, unsigned long width_dst, unsigned long height_dst, double angle, double rotarycentre_x, double rotarycentre_y, double zoom_x, double zoom_y, double move_x, double move_y, unsigned char fill_color);
+
+	//裁切区域
+	bool _clip_region(unsigned char** pSrc, unsigned char** &pDst, unsigned long width_src, unsigned long height_src, unsigned long &width_dst, unsigned long &height_dst,const unsigned char fillup_color);
 
 	/*------------------------------------------------------------------------------------------------------------
 	---------------------------------------------------实现组件-----------------------------------------------------

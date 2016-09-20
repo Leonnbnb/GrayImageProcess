@@ -11,15 +11,21 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="class_barcode_grade_NEW.cpp">
+    <ClCompile Include="Source.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source.cpp">
+    <ClCompile Include="class_barcode_grade.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Class Simple Gray Image Processing\gray_image_processing.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="class_barcode_grade_NEW.h">
+    <ClInclude Include="class_barcode_grade.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Class Simple Gray Image Processing\gray_image_processing.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
