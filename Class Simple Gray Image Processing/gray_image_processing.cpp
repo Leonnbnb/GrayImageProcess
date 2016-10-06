@@ -1659,8 +1659,14 @@ bool Gray_Image_Processing::_trans_Gray_CImg_to_Mat(CImg* pImg, cv::Mat &mat) {
 	return true;
 }
 
-bool Gray_Image_Processing::_trans_Mat_to_Gray_CImg(CImg* pImg, cv::Mat &mat) {
-
+bool Gray_Image_Processing::_trans_Mat_to_Gray_CImg(cv::Mat mat, CImg* &pImg) {
+	if (pImg) {
+		OutputDebugString("\nINFO: Img Exist! --- TGCTODB\n");
+		delete pImg;
+		pImg = NULL;
+	}
+	pImg = create_image();
+	pImg->InitArray8(mat.data, mat.rows, mat.cols);
 }
 
 inline bool Gray_Image_Processing::__pixels_is_in_img(const unsigned long width, const unsigned long height, const long x, const long y) {

@@ -95,6 +95,16 @@ public:
 	//返回值:是否成功执行
 	bool Binaryzation(CImg* pSrcImg, CImg* &pDstImg, unsigned char threshold = 0x7F/*127*/, BINARYZATION_METHOD method = BINARYZATION_METHOD::BI_NONE);
 
+	//TODO:
+	//函数功能: 二值化(OpenCV)
+	//参数:
+	//CImg* pSrcImg: 源图像
+	//CImg* &pDstImg: 目标图像
+	//unsigned char threshold: 二值化阈值(默认为127)
+	//BINARYZATION_METHOD method: 其他自适应阈值计算算法(当参数不为BINARYZATION_METHOD::BI_NONE时,指定的阈值无效)
+	//返回值:是否成功执行
+	//bool Binaryzation_CV(CImg* pSrcImg, CImg* &pDstImg, unsigned char threshold = 0x7F/*127*/, CVBINARYZATION_METHOD method = CVBINARYZATION_METHOD::BI_NONE);
+
 	//函数功能: 灰度腐蚀
 	//参数:
 	//CImg* pSrcImg: 源图像
@@ -300,7 +310,7 @@ private:
 	bool _trans_Gray_CImg_to_Mat(CImg* pImg, cv::Mat &mat);
 
 	//将OpenCV Mat对象转换为CImg对象
-	bool _trans_Mat_to_Gray_CImg(CImg* pImg, cv::Mat &mat);
+	bool _trans_Mat_to_Gray_CImg(cv::Mat mat, CImg* &pImg);
 
 	//全图二值化
 	bool _binaryzation(unsigned char** pSrc, unsigned char** &pDst, unsigned long width, unsigned long height, unsigned char threshold = 0x7F/*127*/);
