@@ -1,7 +1,5 @@
 ﻿#include "gray_image_processing.h"
 
-
-
 /*------------------------------------------------------------------------------------------------------------
 --------------------------------------------------Global------------------------------------------------------
 ------------------------------------------------------------------------------------------------------------*/
@@ -1543,6 +1541,40 @@ void Gray_Image_Processing::SinCos(const double Angle, double& sina, double& cos
 
 #endif
 
+#ifdef DEBUG_TEST
+void Gray_Image_Processing::CV_Test(CImg* pSrcImg) {
+
+	//clock_t begin = clock();
+
+	unsigned char* pBuffer = NULL;
+
+	unsigned long WIDTH = pSrcImg->GetWidthPixel();
+	unsigned long HEIGHT = pSrcImg->GetHeight();
+
+	bool ret = false;
+	ret = this->_trans_Gray_CImg_to_1D_Buffer(pSrcImg, pBuffer);
+	if (ret == false || pBuffer == NULL) {
+		OutputDebugString("\nERROR: Trans CImg to Buffer FAILED! --- CV TEST - 0\n");
+		return;
+	}
+
+	int bits = pSrcImg->GetBitCount();
+
+	cv::Mat Img;
+	if (bits == 8)
+		Img = cv::Mat(HEIGHT, WIDTH, CV_8U, pBuffer).clone();
+	else {
+		Img = cv::Mat(HEIGHT, WIDTH, CV_8UC3, pBuffer).clone();
+		cvtColor(Img, Img, CV_RGB2GRAY);
+	}
+
+	//clock_t end = clock();
+
+	cv::imshow("TEST", Img);
+
+}
+#endif
+
 /*------------------------------------------------------------------------------------------------------------
 --------------------------------------------------Private-----------------------------------------------------
 ------------------------------------------------------------------------------------------------------------*/
@@ -1577,6 +1609,58 @@ bool Gray_Image_Processing::_trans_Gray_CImg_to_Buffer(CImg* pImg, unsigned char
 
 	OutputDebugString("\nINFO: Src Img trans to Buffer success! --- TGCTB\n");
 	return true;
+}
+
+bool Gray_Image_Processing::_trans_Gray_CImg_to_1D_Buffer(CImg* pImg, unsigned char* &pBuffer) {
+	if (pImg == NULL)
+	{
+		OutputDebugString("\nERROR: Src Img noexist! --- TGCTODB\n");
+		return false;
+	}
+
+	if (pBuffer != NULL) {
+		OutputDebugString("\nWARNING: Src Img not NULL! --- TGCTODB\n");
+		delete pBuffer;
+		pBuffer = NULL;
+	}
+
+	unsigned long WIDTH = pImg->GetWidthPixel();
+	unsigned long HEIGHT = pImg->GetHeight();
+
+	pBuffer = new unsigned char[HEIGHT * WIDTH];
+
+	for (long y = 0; y < HEIGHT; ++y) {
+		BYTE* pBuff = pImg->GetPixelAddressRow(y);
+		memcpy(&pBuffer[y*WIDTH], pBuff, sizeof(unsigned char)*WIDTH);
+	}
+
+	OutputDebugString("\nINFO: Src Img trans to Buffer success! --- TGCTODB\n");
+	return true;
+}
+
+bool Gray_Image_Processing::_trans_Gray_CImg_to_Mat(CImg* pImg, cv::Mat &mat) {
+	unsigned char* pBuffer = NULL;
+	unsigned long WIDTH = pImg->GetWidthPixel();
+	unsigned long HEIGHT = pImg->GetHeight();
+
+	bool ret = false;
+	ret = this->_trans_Gray_CImg_to_1D_Buffer(pImg, pBuffer);
+	if (ret == false || pBuffer == NULL) {
+		OutputDebugString("\nERROR: Trans CImg to Buffer FAILED! --- TGCTMAT - 0\n");
+		return false;
+	}
+	int bits = pImg->GetBitCount();
+	if (bits == 8)
+		mat = cv::Mat(HEIGHT, WIDTH, CV_8U, pBuffer).clone();
+	else {
+		mat = cv::Mat(HEIGHT, WIDTH, CV_8UC3, pBuffer).clone();
+		cvtColor(mat, mat, CV_RGB2GRAY);
+	}
+	return true;
+}
+
+bool Gray_Image_Processing::_trans_Mat_to_Gray_CImg(CImg* pImg, cv::Mat &mat) {
+
 }
 
 inline bool Gray_Image_Processing::__pixels_is_in_img(const unsigned long width, const unsigned long height, const long x, const long y) {
@@ -3427,7 +3511,7 @@ bool Gray_Image_Processing::_scaling_nearest_neighbor(unsigned char** pSrc, unsi
 	}
 
 	//TODO:
-	
+
 
 	return true;
 }
@@ -3648,6 +3732,6 @@ bool Gray_Image_Processing::_clip_region(unsigned char** pSrc, unsigned char** &
 			pDst[y - str_y][x - str_x] = pSrc[y][x];
 		}
 	}
-	
+
 	return true;
 }

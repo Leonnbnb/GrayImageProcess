@@ -4,6 +4,7 @@
 #include <cmath>//abs()
 #include <memory.h>
 #include <algorithm>
+#include <opencv2\opencv.hpp>//OpenCV
 
 #include <windows.h>//BOOL etc.
 
@@ -16,7 +17,9 @@
 #endif
 
 //#define CALC_TIME
+//#include <ctime>
 //#define LOCAL_FUNCS_EXTEND
+#define DEBUG_TEST
 
 #ifdef CALC_TIME
 #include <ctime>//clock_t
@@ -267,6 +270,7 @@ public:
 	//ROTATE_CLIP_METHOD clip_method: 图片裁切缩放方式(默认为原图大小 ROTATE_CLIP_METHOD::RC_ORIG)
 	bool Rotate(CImg* pSrcImg, CImg* &pDstImg, double angle, double rotarycentre_x, double rotarycentre_y, double zoom_x, double zoom_y, double move_x, double move_y, unsigned char fill_color, ROTATE_METHOD method = ROTATE_METHOD::RO_NEAREST_NEIGHBOR, ROTATE_CLIP_METHOD clip_method = ROTATE_CLIP_METHOD::RC_ORIG);
 
+
 #ifdef LOCAL_FUNCS_EXTEND
 	//函数功能: 使用FPU一次性得到Sin与Cos值
 	//参数:
@@ -277,12 +281,26 @@ public:
 
 #endif
 
+#ifdef DEBUG_TEST
+	void CV_Test(CImg* pSrcImg);
+
+#endif
+
 	/*------------------------------------------------------------------------------------------------------------
 	---------------------------------------------------功能实现-----------------------------------------------------
 	------------------------------------------------------------------------------------------------------------*/
 private:
 	//将CImg对象转换为Buffer数组
 	bool _trans_Gray_CImg_to_Buffer(CImg* pImg, unsigned char** &pBuffer);
+
+	//将CImg对象转换为Buffer一维数组
+	bool _trans_Gray_CImg_to_1D_Buffer(CImg* pImg, unsigned char* &pBuffer);
+
+	//将CImg对象转换为OpenCV Mat对象
+	bool _trans_Gray_CImg_to_Mat(CImg* pImg, cv::Mat &mat);
+
+	//将OpenCV Mat对象转换为CImg对象
+	bool _trans_Mat_to_Gray_CImg(CImg* pImg, cv::Mat &mat);
 
 	//全图二值化
 	bool _binaryzation(unsigned char** pSrc, unsigned char** &pDst, unsigned long width, unsigned long height, unsigned char threshold = 0x7F/*127*/);
@@ -357,7 +375,7 @@ private:
 	bool _rotate_common_bilinear(unsigned char** pSrc, unsigned char** &pDst, unsigned long width_src, unsigned long height_src, unsigned long width_dst, unsigned long height_dst, double angle, double rotarycentre_x, double rotarycentre_y, double zoom_x, double zoom_y, double move_x, double move_y, unsigned char fill_color);
 
 	//裁切区域
-	bool _clip_region(unsigned char** pSrc, unsigned char** &pDst, unsigned long width_src, unsigned long height_src, unsigned long &width_dst, unsigned long &height_dst,const unsigned char fillup_color);
+	bool _clip_region(unsigned char** pSrc, unsigned char** &pDst, unsigned long width_src, unsigned long height_src, unsigned long &width_dst, unsigned long &height_dst, const unsigned char fillup_color);
 
 	/*------------------------------------------------------------------------------------------------------------
 	---------------------------------------------------实现组件-----------------------------------------------------
