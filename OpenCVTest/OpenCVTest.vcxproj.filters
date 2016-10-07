@@ -11,7 +11,7 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Block.cpp">
+    <ClCompile Include="Hole.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
